@@ -70,12 +70,13 @@ public class MainActivity extends Activity {
     public MySocketServer mServer;
     private static final int SERVER_PORT = 9402;
     Map<String, Object> alert = new HashMap<>();
+
     //*******PLC****************
     private Handler handler;
     Runnable runnable;
     int timer=1000 ;
     String cmd ;
-
+    Map<String, Object> PCMD = new HashMap<>();
     private UsbSerialInterface.UsbReadCallback callback = new UsbSerialInterface.UsbReadCallback() {
         @Override
         public void onReceivedData(byte[] data) {
@@ -126,13 +127,15 @@ public class MainActivity extends Activity {
         if (memberEmail==null) {
             startServer();
         }else{
+            mRX = FirebaseDatabase.getInstance().getReference("/RS232/"+deviceId+"/RX/");
+            mTX= FirebaseDatabase.getInstance().getReference("/RS232/"+deviceId+"/TX/");
             deviceOnline();
             usbManager = getSystemService(UsbManager.class);
             // Detach events are sent as a system-wide broadcast
             IntentFilter filter = new IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED);
             registerReceiver(usbDetachedReceiver, filter);
             transferUartTX();
-            periodRequestDevice();
+            requestDevice();
         }
     }
 
@@ -169,7 +172,7 @@ public class MainActivity extends Activity {
     private void startSerialConnection(UsbDevice device) {
         Log.i(TAG, "Ready to open USB device connection");
         connection = usbManager.openDevice(device);
-        int iface = 0;
+        int iface = 0;// multiple devices
         serialDevice = UsbSerialDevice.createUsbSerialDevice(device, connection,iface);
         if (serialDevice != null) {
             if (serialDevice.open()) {
@@ -189,17 +192,9 @@ public class MainActivity extends Activity {
     }
 
     private void onSerialDataReceived(String data) {
-        //todo: data parser
-        //data log
-        mRX= FirebaseDatabase.getInstance().getReference("/RS232/"+deviceId+"/RX/");
-        Map<String, Object> RX = new HashMap<>();
-        RX.clear();
-        RX.put("message",data);
-        RX.put("timeStamp", ServerValue.TIMESTAMP);
-        mRX.push().setValue(RX);
+
+        deviceRespond(data);
         Log.i(TAG, "Serial data received: " + data);
-        //
-        alert(data);
     }
 
     private void stopUsbConnection() {
@@ -316,7 +311,6 @@ public class MainActivity extends Activity {
         });
     }
     private void transferUartTX() {
-        mTX= FirebaseDatabase.getInstance().getReference("/RS232/"+deviceId+"/TX/");
         mTX.addChildEventListener(new ChildEventListener() {
             @Override
             public void onChildAdded(DataSnapshot dataSnapshot, String s) {
@@ -328,38 +322,75 @@ public class MainActivity extends Activity {
                     //   requestPLC();
                 }
             }
-
             @Override
             public void onChildRemoved(DataSnapshot dataSnapshot) {}
-
             @Override
             public void onChildMoved(DataSnapshot dataSnapshot, String s) {}
-
             @Override
             public void onChildChanged(DataSnapshot dataSnapshot, String s) {}
-
             @Override
             public void onCancelled(DatabaseError databaseError) {}
         });
     }
+    private void deviceRespond(String data){
+        //todo: data parser
+        if (data.contains("A")) {
+            Map<String, Object> RX = new HashMap<>();
+            RX.clear();
+            RX.put("message", data);
+            RX.put("timeStamp", ServerValue.TIMESTAMP);
+            mRX.push().setValue(RX);
+            alert(data);
+        }else if(data.contains("L")){
+            Map<String, Object> RX = new HashMap<>();
+            RX.clear();
+            RX.put("message", data);
+            RX.put("timeStamp", ServerValue.TIMESTAMP);
+            mRX.push().setValue(RX);
+        }
+    }
 
-    private void periodRequestDevice(){
+    private void requestDevice(){
+        PCMD.clear();
+        DatabaseReference  mRequest= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/REQ/");
+        mRequest.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                for (DataSnapshot childSnapshot : snapshot.getChildren()) {
+                    if (childSnapshot.child("message").getValue() != null) {
+                        PCMD.put(childSnapshot.getKey(),childSnapshot.child("message").getValue());
+                        String CMD = snapshot.child("message").getValue().toString();
+                        serialDevice.write((STX + CMD + ETX).getBytes());
+                        Log.i(TAG, "Serial data send: " + cmd);
+                    }
+                    reqTimer();
+                }
+            }
+            @Override
+            public void onCancelled(DatabaseError databaseError) {}
+        });
+    }
+    private void reqTimer(){
+        if (handler!=null){
+            handler=null;
+        }
         handler = new Handler();
         runnable = new Runnable()
         {
             @Override
             public void run()
             {
-                serialDevice.write((STX+cmd+ETX).getBytes()); // Async-like operation now! :)
+                for(String PCMDKey:PCMD.keySet()) {
+                    serialDevice.write((STX +PCMD.get(PCMDKey).toString()+ ETX).getBytes()); // Async-like operation now! :)
+                }
                 handler.postDelayed(this, timer);
             }
         };
         handler.postDelayed(runnable, timer);
-    }
-
+        }
 
     private void alert(String message){
-        NotifyUser.topicsPUSH(deviceId,memberEmail,"PLC通知",message);
+        NotifyUser.topicsPUSH(deviceId,memberEmail,"智慧機通知",message);
         DatabaseReference mAlertMaster= FirebaseDatabase.getInstance().getReference("/master/"+memberEmail.replace(".", "_")+"/"+deviceId+"/alert");
         alert.clear();
         alert.put("message",message);
