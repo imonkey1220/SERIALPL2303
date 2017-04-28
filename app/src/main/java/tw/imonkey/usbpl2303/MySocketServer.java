@@ -1,11 +1,12 @@
 package tw.imonkey.usbpl2303;
 
-import org.greenrobot.eventbus.EventBus;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
 
 import java.net.InetSocketAddress;
+
+import de.greenrobot.event.EventBus;
 
 
 public class MySocketServer extends WebSocketServer {

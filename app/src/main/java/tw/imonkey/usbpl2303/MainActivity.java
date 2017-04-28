@@ -23,8 +23,6 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ServerValue;
 import com.google.firebase.database.ValueEventListener;
 
-import org.greenrobot.eventbus.EventBus;
-
 import java.io.UnsupportedEncodingException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -37,6 +35,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
 
+import de.greenrobot.event.EventBus;
 
 
 public class MainActivity extends Activity {
@@ -119,7 +118,6 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         TimeZone.setDefault(TimeZone.getTimeZone("Asia/Taipei"));
-        EventBus.getDefault().register(this);
         SharedPreferences settings = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE);
         memberEmail = settings.getString("memberEmail",null);
         deviceId = settings.getString("deviceId",null);
@@ -340,7 +338,7 @@ public class MainActivity extends Activity {
             RX.put("message", data);
             RX.put("timeStamp", ServerValue.TIMESTAMP);
             mRX.push().setValue(RX);
-            alert(data);
+            alert(data); // alert client.
         }else if(data.contains("L")){
             Map<String, Object> RX = new HashMap<>();
             RX.clear();
@@ -391,6 +389,10 @@ public class MainActivity extends Activity {
 
     private void alert(String message){
         NotifyUser.topicsPUSH(deviceId,memberEmail,"智慧機通知",message);
+        NotifyUser.IIDPUSH(deviceId,memberEmail,"智慧機通知",message);
+        NotifyUser.emailPUSH(deviceId,memberEmail,message);
+        NotifyUser.SMSPUSH(deviceId,memberEmail,message);
+
         DatabaseReference mAlertMaster= FirebaseDatabase.getInstance().getReference("/master/"+memberEmail.replace(".", "_")+"/"+deviceId+"/alert");
         alert.clear();
         alert.put("message",message);
