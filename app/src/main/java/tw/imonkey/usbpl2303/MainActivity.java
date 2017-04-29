@@ -34,6 +34,8 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import de.greenrobot.event.EventBus;
 
@@ -119,8 +121,8 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         TimeZone.setDefault(TimeZone.getTimeZone("Asia/Taipei"));
         SharedPreferences settings = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE);
-        memberEmail = settings.getString("memberEmail",null);
-        deviceId = settings.getString("deviceId",null);
+        memberEmail = settings.getString("memberEmail","PLC@test.com");
+        deviceId = settings.getString("deviceId","PLC_RS232_test");
 
         if (memberEmail==null) {
             startServer();
@@ -378,10 +380,22 @@ public class MainActivity extends Activity {
             @Override
             public void run()
             {
+                Calendar cTime = Calendar.getInstance();
+
                 for(String PCMDKey:PCMD.keySet()) {
+                    boolean flag=true ;
+                    long start,now;
                     serialDevice.write((STX +PCMD.get(PCMDKey).toString()+ ETX).getBytes()); // Async-like operation now! :)
+                    start=cTime.getTimeInMillis();
+                    while(flag){
+                        cTime = Calendar.getInstance();
+                        now=cTime.getTimeInMillis();
+                        if ((now-start)>100){
+                            flag=false;
+                        }
+                    }
                 }
-                handler.postDelayed(this, timer);
+              handler.postDelayed(this, timer);
             }
         };
         handler.postDelayed(runnable, timer);
