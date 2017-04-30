@@ -29,7 +29,7 @@
 
     // Removes siblings of the node that element that triggered the function if there are more than MAX_LOG_COUNT.
     // In this example we'll keep the max number of chat message history to MAX_LOG_COUNT.
-    exports.logLimit= functions.database.ref('LOG/{service}/{deviceId}/{message}').onWrite(event => {
+    exports.logLimit= functions.database.ref('/LOG/{service}/{deviceId}/{message}').onWrite(event => {
       // Max number of lines of the chat history.
       const MAX_LOG_COUNT = 1024-1;
       const parentRef = event.data.ref;
@@ -49,7 +49,7 @@
     });
 
 
-exports.IIDPUSH= functions.database.ref('/PUSHIID/').onWrite(event => {
+exports.IIDPUSH= functions.database.ref('/LOG/PUSHIID/').onWrite(event => {
       const parentRef = event.data.ref;
       return parentRef.once('value').then(snapshot => {
         //todo
@@ -59,7 +59,7 @@ exports.IIDPUSH= functions.database.ref('/PUSHIID/').onWrite(event => {
     });
   });
 
-exports.topicsPUSH= functions.database.ref('/PUSHTopics/').onWrite(event => {
+exports.topicsPUSH= functions.database.ref('/LOG/PUSHTopics/').onWrite(event => {
       const parentRef = event.data.ref;
       return parentRef.once('value').then(snapshot => {
         //todo
@@ -115,7 +115,7 @@ function topics_Push(topicsId,message) {
    return admin.messaging().sendToTopic(topicId, payload);
 }
 
-exports.emailPUSH = functions.database.ref('/EMAIL/').onWrite(event => {
+exports.emailPUSH = functions.database.ref('/LOG/EMAIL/').onWrite(event => {
   const parentRef = event.data.ref;
   return parentRef.once('value').then(snapshot => {
     const email =snapshot.memberEmail; // The email of the user.
