@@ -243,7 +243,7 @@ public class MainActivity extends Activity {
     }
 
     @SuppressWarnings("UnusedDeclaration")
-    public void onEvent(SocketMessageEvent event) {
+    public void onEvent(SocketMessageEvent event) {  //  receive message from eventbus
         String message = event.getMessage();
         String[] mArray = message.split(",");
         if (mArray.length==2) {
@@ -283,21 +283,22 @@ public class MainActivity extends Activity {
             public void onCancelled(DatabaseError error) {
             }
         });
+
         mFriend= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/friend"); //for friend's main activity
         mFriend.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
                 for (DataSnapshot childSnapshot : snapshot.getChildren()) {
-                    final DatabaseReference presenceRefF= FirebaseDatabase.getInstance().getReference("/friend/"+childSnapshot.getValue().toString().replace(".", "_")+"/"+deviceId+"/connection");
-                    presenceRefF.setValue(true);
-                    presenceRefF.onDisconnect().setValue(null);
+                    final DatabaseReference presenceRefToFirends= FirebaseDatabase.getInstance().getReference("/friend/"+childSnapshot.getValue().toString().replace(".", "_")+"/"+deviceId+"/connection");
+                    presenceRefToFirends.setValue(true);
+                    presenceRefToFirends.onDisconnect().setValue(null);
                     connectedRefF = FirebaseDatabase.getInstance().getReference(".info/connected");
                     connectedRefF.addValueEventListener(new ValueEventListener() {
                         @Override
                         public void onDataChange(DataSnapshot snapshot) {
                             boolean connected = snapshot.getValue(Boolean.class);
                             if (connected) {
-                                presenceRefF.setValue(true);
+                                presenceRefToFirends.setValue(true);
                             }
                         }
                         @Override

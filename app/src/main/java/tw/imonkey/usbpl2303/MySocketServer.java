@@ -29,7 +29,7 @@ public class MySocketServer extends WebSocketServer {
 
     @Override
     public void onMessage(WebSocket conn, String message) {
-        EventBus.getDefault().post(new SocketMessageEvent(message));
+        EventBus.getDefault().post(new SocketMessageEvent(message)); //eventbus broadcast message
     }
 
     @Override
