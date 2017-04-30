@@ -34,8 +34,6 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import de.greenrobot.event.EventBus;
 
@@ -45,9 +43,9 @@ public class MainActivity extends Activity {
     private static final String TAG = MainActivity.class.getSimpleName();
     //   private static final int USB_VENDOR_ID = 0x0403;//arduino nano FT232RL
     //   private static final int USB_PRODUCT_ID = 0x6001;
-    // private static final int USB_VENDOR_ID = 0x2341;//arduino uno(BT)
+    //   private static final int USB_VENDOR_ID = 0x2341;//arduino uno(BT)
     //   private static final int USB_PRODUCT_ID = 0x0043;
-    private static final int USB_VENDOR_ID = 0x067b;//PL2303HXD
+    private static final int USB_VENDOR_ID = 0x067B;//PL2303HXD
     private static final int USB_PRODUCT_ID = 0x2303;
 
     private UsbManager usbManager;
@@ -134,7 +132,7 @@ public class MainActivity extends Activity {
             // Detach events are sent as a system-wide broadcast
             IntentFilter filter = new IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED);
             registerReceiver(usbDetachedReceiver, filter);
-            transferUartTX();
+            listenUartTX();
             requestDevice();
         }
     }
@@ -192,7 +190,6 @@ public class MainActivity extends Activity {
     }
 
     private void onSerialDataReceived(String data) {
-
         deviceRespond(data);
         Log.i(TAG, "Serial data received: " + data);
     }
@@ -311,7 +308,7 @@ public class MainActivity extends Activity {
             public void onCancelled(DatabaseError databaseError) {}
         });
     }
-    private void transferUartTX() {
+    private void listenUartTX() {
         mTX.addChildEventListener(new ChildEventListener() {
             @Override
             public void onChildAdded(DataSnapshot dataSnapshot, String s) {
