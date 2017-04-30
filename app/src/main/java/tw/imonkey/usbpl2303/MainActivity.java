@@ -125,8 +125,8 @@ public class MainActivity extends Activity {
         if (memberEmail==null) {
             startServer();
         }else{
-            mRX = FirebaseDatabase.getInstance().getReference("/RS232/"+deviceId+"/RX/");
-            mTX= FirebaseDatabase.getInstance().getReference("/RS232/"+deviceId+"/TX/");
+            mRX = FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/RX/");
+            mTX= FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/TX/");
             deviceOnline();
             usbManager = getSystemService(UsbManager.class);
             // Detach events are sent as a system-wide broadcast
@@ -257,7 +257,7 @@ public class MainActivity extends Activity {
 
     //device online check
     private void deviceOnline(){
-        mRS232Live=FirebaseDatabase.getInstance().getReference("/RS232/"+deviceId+"/connection");//for log activity
+        mRS232Live=FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/connection");//for log activity
         mRS232Live.setValue(true);
         mRS232Live.onDisconnect().setValue(null);
 
@@ -410,7 +410,7 @@ public class MainActivity extends Activity {
         alert.put("message",message);
         alert.put("timeStamp", ServerValue.TIMESTAMP);
         mAlertMaster.setValue(alert);
-        DatabaseReference mFriend= FirebaseDatabase.getInstance().getReference("/devices/"+memberEmail.replace(".", "_")+"/"+deviceId+"/friend");
+        DatabaseReference mFriend= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/friend");
         mFriend.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
