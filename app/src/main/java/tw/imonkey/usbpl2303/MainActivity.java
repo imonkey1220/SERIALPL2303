@@ -60,8 +60,8 @@ public class MainActivity extends Activity {
     int flowControl= UsbSerialInterface.FLOW_CONTROL_OFF;
     String buffer = "";
     //set serialport protocol parameters
-    byte STX=0x3A; //0x02:STX,0x03:ETX,0x05:ENQ,0x0A:'/n',0xOD:CR,0x0A:LF,0x3A:':'
-    byte ETX=0x0A;
+    char STX=0x3A; //0x02:STX,0x03:ETX,0x05:ENQ,0x0A:'/n',0xOD:CR,0x0A:LF,0x3A:':'
+    char ETX=0x0A;
     //*************firebase*****************
     String memberEmail,deviceId;
     public static final String devicePrefs = "devicePrefs";
