@@ -60,8 +60,8 @@ public class MainActivity extends Activity {
     int flowControl= UsbSerialInterface.FLOW_CONTROL_OFF;
     String buffer = "";
     //set serialport protocol parameters
-    char STX=0x3A; //0x02:STX,0x03:ETX,0x05:ENQ,0x0A:'/n',0xOD:CR,0x0A:LF,0x3A:':'
-    char ETX=0x0A;
+    String STX=new String(new char[]{0x3A});
+    String ETX=new String(new char[]{0x0D,0x0A});//0x02:STX,0x03:ETX,0x05:ENQ,0x0A:'/n',0xOD:CR,0x0A:LF,0x3A:':'
     //*************firebase*****************
     String memberEmail,deviceId;
     public static final String devicePrefs = "devicePrefs";
@@ -424,8 +424,6 @@ public class MainActivity extends Activity {
             public void onCancelled(DatabaseError databaseError) {}
         });
     }
-
-
 }
 
 
