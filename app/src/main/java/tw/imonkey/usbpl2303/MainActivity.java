@@ -334,12 +334,12 @@ public class MainActivity extends Activity {
     private void deviceRespond(String data){
         //todo: data parser
         if (data.contains("A")) {
+            alert(data); // alert client.
             Map<String, Object> RX = new HashMap<>();
             RX.clear();
             RX.put("message", data);
             RX.put("timeStamp", ServerValue.TIMESTAMP);
             mRX.push().setValue(RX);
-            alert(data); // alert client.
         }else if(data.contains("L")){
             Map<String, Object> RX = new HashMap<>();
             RX.clear();
