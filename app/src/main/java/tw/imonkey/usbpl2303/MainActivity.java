@@ -61,7 +61,7 @@ public class MainActivity extends Activity {
     String buffer = "";
     //set serialport protocol parameters
     byte STX=0x3A; //0x02:STX,0x03:ETX,0x05:ENQ,0x0A:'/n',0xOD:CR,0x0A:LF,0x3A:':'
-    byte ETX0=0x0A,ETX1=0x0D;
+    byte ETX=0x0A;
     //*************firebase*****************
     String memberEmail,deviceId;
     public static final String devicePrefs = "devicePrefs";
@@ -83,7 +83,7 @@ public class MainActivity extends Activity {
                 String dataUtf8 = new String(data, "UTF-8");
                 buffer += dataUtf8;
                 int index;
-                while ((index = buffer.indexOf(ETX0)) != -1) {  //string.indexOf('\n')=-1 =>'\n' not exists
+                while ((index = buffer.indexOf(ETX)) != -1) {  //string.indexOf('\n')=-1 =>'\n' not exists
                     final String dataStr = buffer.substring(0, index + 1).trim();
                     buffer = buffer.length() == index ? "" : buffer.substring(index + 1);
                     runOnUiThread(new Runnable() {
@@ -316,7 +316,7 @@ public class MainActivity extends Activity {
 
                 if (dataSnapshot.child("message").getValue()!= null) {
                     String oneTimeCMD=dataSnapshot.child("message").getValue().toString();
-                    serialDevice.write((STX+oneTimeCMD+ETX1+ETX0).getBytes());
+                    serialDevice.write((STX+oneTimeCMD+ETX).getBytes());
                     Log.i(TAG, "Serial data send: " + cmd);
                     //   requestPLC();
                 }
@@ -359,7 +359,7 @@ public class MainActivity extends Activity {
                     if (childSnapshot.child("message").getValue() != null) {
                         PCMD.put(childSnapshot.getKey(),childSnapshot.child("message").getValue());
                         String CMD = snapshot.child("message").getValue().toString();
-                        serialDevice.write((STX + CMD + ETX1 + ETX0).getBytes());
+                        serialDevice.write((STX + CMD + ETX).getBytes());
                         Log.i(TAG, "Serial data send: " + cmd);
                     }
                     reqTimer();
@@ -384,7 +384,7 @@ public class MainActivity extends Activity {
                 for(String PCMDKey:PCMD.keySet()) {
                     boolean flag=true ;
                     long start,now;
-                    serialDevice.write((STX +PCMD.get(PCMDKey).toString()+ ETX1 +ETX0).getBytes()); // Async-like operation now! :)
+                    serialDevice.write((STX +PCMD.get(PCMDKey).toString()+ETX).getBytes()); // Async-like operation now! :)
                     start=cTime.getTimeInMillis();
                     while(flag){
                         cTime = Calendar.getInstance();
