@@ -15,6 +15,9 @@ import android.util.Log;
 
 import com.felhr.usbserial.UsbSerialDevice;
 import com.felhr.usbserial.UsbSerialInterface;
+import com.google.android.things.pio.Gpio;
+import com.google.android.things.pio.GpioCallback;
+import com.google.android.things.pio.PeripheralManagerService;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -23,6 +26,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ServerValue;
 import com.google.firebase.database.ValueEventListener;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -39,6 +43,8 @@ import de.greenrobot.event.EventBus;
 
 
 public class MainActivity extends Activity {
+    private Gpio RESETGpio;
+    String RESET="BCM26";
     //**************USBSerialPort
     private static final String TAG = MainActivity.class.getSimpleName();
     //   private static final int USB_VENDOR_ID = 0x0403;//arduino nano FT232RL
@@ -119,10 +125,12 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         TimeZone.setDefault(TimeZone.getTimeZone("Asia/Taipei"));
         SharedPreferences settings = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE);
-        memberEmail = settings.getString("memberEmail","PLC@test.com");
-        deviceId = settings.getString("deviceId","PLC_RS232_test");
+        memberEmail = settings.getString("memberEmail",null);
+        deviceId = settings.getString("deviceId",null);
 
         if (memberEmail==null) {
+            memberEmail="PLC@test.com";
+            deviceId="PLC_RS232_test";
             startServer();
         }else{
             mRX = FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/RX/");
@@ -135,6 +143,7 @@ public class MainActivity extends Activity {
             registerReceiver(usbDetachedReceiver, filter);
             listenUartTX();
             requestDevice();
+            RESETListener();
         }
     }
 
@@ -151,6 +160,40 @@ public class MainActivity extends Activity {
         unregisterReceiver(usbDetachedReceiver);
         stopUsbConnection();
         EventBus.getDefault().unregister(this);
+        if (RESETGpio != null) {
+            try {
+                RESETGpio.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                RESETGpio = null;
+            }
+        }
+    }
+
+    private void RESETListener(){
+        PeripheralManagerService service = new PeripheralManagerService();
+        try {
+            RESETGpio = service.openGpio(RESET);
+            RESETGpio.setDirection(Gpio.DIRECTION_IN);
+            RESETGpio.setEdgeTriggerType(Gpio.EDGE_BOTH);
+            RESETGpio.registerGpioCallback(new GpioCallback() {
+                @Override
+                public boolean onGpioEdge(Gpio gpio) {
+
+                    try {
+                        if (RESETGpio.getValue()){
+                            startServer();
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    return true;
+                }
+            });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void startUsbConnection() {
