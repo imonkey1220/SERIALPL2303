@@ -295,7 +295,9 @@ public class MainActivity extends Activity {
             editor.putString("deviceId",deviceId);
             editor.apply();
             mServer.sendMessage("echo: " + message);
-            mServer.sendMessage("OK?->Reboot,please");
+            Intent i;
+            i = new Intent(this,MainActivity.class);
+            startActivity(i);
         }
     }
 
@@ -305,10 +307,10 @@ public class MainActivity extends Activity {
         mRS232Live.setValue(true);
         mRS232Live.onDisconnect().setValue(null);
 
-        presenceRef = FirebaseDatabase.getInstance().getReference("/master/"+memberEmail.replace(".", "_")+"/"+deviceId+"/connection");//for boss's main activity
+        presenceRef = FirebaseDatabase.getInstance().getReference("/FUI/"+memberEmail.replace(".", "_")+"/"+deviceId+"/connection");//for boss's main activity
         presenceRef.setValue(true);
         presenceRef.onDisconnect().setValue(null);
-        lastOnlineRef =FirebaseDatabase.getInstance().getReference("/master/"+memberEmail.replace(".", "_")+"/"+deviceId+"/lastOnline");
+        lastOnlineRef =FirebaseDatabase.getInstance().getReference("/FUI/"+memberEmail.replace(".", "_")+"/"+deviceId+"/lastOnline");
         lastOnlineRef.onDisconnect().setValue(ServerValue.TIMESTAMP);
         connectedRef = FirebaseDatabase.getInstance().getReference(".info/connected");
         connectedRef.addValueEventListener(new ValueEventListener() {
@@ -330,7 +332,7 @@ public class MainActivity extends Activity {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
                 for (DataSnapshot childSnapshot : snapshot.getChildren()) {
-                    final DatabaseReference presenceRefToFirends= FirebaseDatabase.getInstance().getReference("/friend/"+childSnapshot.getValue().toString().replace(".", "_")+"/"+deviceId+"/connection");
+                    final DatabaseReference presenceRefToFirends= FirebaseDatabase.getInstance().getReference("/FUI/"+childSnapshot.getValue().toString().replace(".", "_")+"/"+deviceId+"/connection");
                     presenceRefToFirends.setValue(true);
                     presenceRefToFirends.onDisconnect().setValue(null);
                     connectedRefF = FirebaseDatabase.getInstance().getReference(".info/connected");
@@ -449,7 +451,7 @@ public class MainActivity extends Activity {
         NotifyUser.emailPUSH(deviceId,memberEmail,message);
         NotifyUser.SMSPUSH(deviceId,memberEmail,message);
 
-        DatabaseReference mAlertMaster= FirebaseDatabase.getInstance().getReference("/master/"+memberEmail.replace(".", "_")+"/"+deviceId+"/alert");
+        DatabaseReference mAlertMaster= FirebaseDatabase.getInstance().getReference("/FUI/"+memberEmail.replace(".", "_")+"/"+deviceId+"/alert");
         alert.clear();
         alert.put("message",message);
         alert.put("timeStamp", ServerValue.TIMESTAMP);
@@ -459,7 +461,7 @@ public class MainActivity extends Activity {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
                 for (DataSnapshot childSnapshot : snapshot.getChildren()) {
-                    DatabaseReference mAlertFriend= FirebaseDatabase.getInstance().getReference("/friend/"+childSnapshot.getValue().toString().replace(".", "_")+"/"+deviceId+"/alert");
+                    DatabaseReference mAlertFriend= FirebaseDatabase.getInstance().getReference("/FUI/"+childSnapshot.getValue().toString().replace(".", "_")+"/"+deviceId+"/alert");
                     mAlertFriend.setValue(alert);
                 }
             }
