@@ -42,6 +42,7 @@ import java.util.TimeZone;
 import de.greenrobot.event.EventBus;
 
 
+
 public class MainActivity extends Activity {
     private Gpio RESETGpio;
     String RESET="BCM26";
@@ -127,24 +128,22 @@ public class MainActivity extends Activity {
         SharedPreferences settings = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE);
         memberEmail = settings.getString("memberEmail",null);
         deviceId = settings.getString("deviceId",null);
-
         if (memberEmail==null) {
             memberEmail="PLC@test.com";
             deviceId="PLC_RS232_test";
             startServer();
-        }else{
-            mRX = FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/RX/");
-                // "/RS232/"=>"/LOG/RS232/" for firebase functions
-            mTX= FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/TX/");
-            deviceOnline();
-            usbManager = getSystemService(UsbManager.class);
-            // Detach events are sent as a system-wide broadcast
-            IntentFilter filter = new IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED);
-            registerReceiver(usbDetachedReceiver, filter);
-            listenUartTX();
-            requestDevice();
-            RESETListener();
         }
+        mRX = FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/RX/");
+                // "/RS232/"=>"/LOG/RS232/" for firebase functions
+        mTX= FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/TX/");
+        deviceOnline();
+        usbManager = getSystemService(UsbManager.class);
+            // Detach events are sent as a system-wide broadcast
+        IntentFilter filter = new IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED);
+        registerReceiver(usbDetachedReceiver, filter);
+        listenUartTX();
+        requestDevice();
+        //RESETListener();
     }
 
     @Override
@@ -170,7 +169,7 @@ public class MainActivity extends Activity {
             }
         }
     }
-
+/*
     private void RESETListener(){
         PeripheralManagerService service = new PeripheralManagerService();
         try {
@@ -195,10 +194,10 @@ public class MainActivity extends Activity {
             e.printStackTrace();
         }
     }
+    */
 
     private void startUsbConnection() {
         Map<String, UsbDevice> connectedDevices = usbManager.getDeviceList();
-
         if (!connectedDevices.isEmpty()) {
             for (UsbDevice device : connectedDevices.values()) {
                 if (device.getVendorId() == USB_VENDOR_ID && device.getProductId() == USB_PRODUCT_ID) {
@@ -282,6 +281,7 @@ public class MainActivity extends Activity {
 
         return null;
     }
+
     // eventbus:2.4.0
     @SuppressWarnings("UnusedDeclaration")
     public void onEvent(SocketMessageEvent event) {  //  receive message from eventbus
@@ -300,33 +300,6 @@ public class MainActivity extends Activity {
             startActivity(i);
         }
     }
-
-    /*// eventbus:3.0.0
-    This method will be called when a SocketMessageEvent is posted (in the UI thread for Toast)
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    public void onMessageEvent(SocketMessageEvent event) {
-     //   Toast.makeText(getActivity(), event.message, Toast.LENGTH_SHORT).show();
-        String message = event.getMessage();
-        String[] mArray = message.split(",");
-        if (mArray.length==2) {
-            memberEmail = mArray[0];
-            deviceId =  mArray[1];
-            SharedPreferences.Editor editor = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE).edit();
-            editor.putString("memberEmail",memberEmail);
-            editor.putString("deviceId",deviceId);
-            editor.apply();
-            mServer.sendMessage("echo: " + message);
-            Intent i;
-            i = new Intent(this,MainActivity.class);
-            startActivity(i);
-        }
-    }
-
-    // This method will be called when a SomeOtherEvent is posted
-    //@Subscribe
-   // public void handleSomethingElse(SomeOtherEvent event) {
-   //     doSomethingWith(event);
-   // }*/
 
     //device online check
     private void deviceOnline(){
@@ -451,8 +424,9 @@ public class MainActivity extends Activity {
             @Override
             public void run()
             {
+            //  String cmd="Android Things";
+            //    serialDevice.write((STX+cmd+ETX).getBytes());
                 Calendar cTime = Calendar.getInstance();
-
                 for(String PCMDKey:PCMD.keySet()) {
                     boolean flag=true ;
                     long start,now;

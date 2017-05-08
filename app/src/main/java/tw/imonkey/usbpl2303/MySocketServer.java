@@ -1,5 +1,7 @@
 package tw.imonkey.usbpl2303;
 
+import android.util.Log;
+
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
@@ -20,6 +22,7 @@ public class MySocketServer extends WebSocketServer {
     @Override
     public void onOpen(WebSocket conn, ClientHandshake handshake) {
         mSocket = conn;
+        Log.i("WebSocketServer", "connected!");
     }
 
     @Override
