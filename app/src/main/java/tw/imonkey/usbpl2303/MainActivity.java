@@ -282,7 +282,7 @@ public class MainActivity extends Activity {
 
         return null;
     }
-
+    // eventbus:2.4.0
     @SuppressWarnings("UnusedDeclaration")
     public void onEvent(SocketMessageEvent event) {  //  receive message from eventbus
         String message = event.getMessage();
@@ -300,6 +300,33 @@ public class MainActivity extends Activity {
             startActivity(i);
         }
     }
+
+    /*// eventbus:3.0.0
+    This method will be called when a SocketMessageEvent is posted (in the UI thread for Toast)
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onMessageEvent(SocketMessageEvent event) {
+     //   Toast.makeText(getActivity(), event.message, Toast.LENGTH_SHORT).show();
+        String message = event.getMessage();
+        String[] mArray = message.split(",");
+        if (mArray.length==2) {
+            memberEmail = mArray[0];
+            deviceId =  mArray[1];
+            SharedPreferences.Editor editor = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE).edit();
+            editor.putString("memberEmail",memberEmail);
+            editor.putString("deviceId",deviceId);
+            editor.apply();
+            mServer.sendMessage("echo: " + message);
+            Intent i;
+            i = new Intent(this,MainActivity.class);
+            startActivity(i);
+        }
+    }
+
+    // This method will be called when a SomeOtherEvent is posted
+    //@Subscribe
+   // public void handleSomethingElse(SomeOtherEvent event) {
+   //     doSomethingWith(event);
+   // }*/
 
     //device online check
     private void deviceOnline(){

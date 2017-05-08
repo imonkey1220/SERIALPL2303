@@ -13,7 +13,7 @@ public class Checksum {
     public static byte SUM(byte[] bytes){
         byte iSUM  = 0x00;
         for (byte aByte : bytes) {
-            iSUM |= aByte;
+            iSUM += aByte;
         }
         return iSUM;
     }
