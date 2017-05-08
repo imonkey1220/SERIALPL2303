@@ -120,7 +120,6 @@ public class MainActivity extends Activity {
         }
     };
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -143,7 +142,8 @@ public class MainActivity extends Activity {
         registerReceiver(usbDetachedReceiver, filter);
         listenUartTX();
         requestDevice();
-        //RESETListener();
+   //     RESETListener();
+
     }
 
     @Override
@@ -193,6 +193,7 @@ public class MainActivity extends Activity {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
     }
     */
 

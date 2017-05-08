@@ -27,6 +27,7 @@ class NotifyUser {
         EMAIL.put("memberEmail",memberEmail);
         EMAIL.put("timeStamp", ServerValue.TIMESTAMP);
         mEMAILMaster.push().setValue(EMAIL);
+
     }
 
     static void topicsPUSH( String deviceId ,String memberEmail,String message_title,String message_body){
@@ -47,7 +48,7 @@ class NotifyUser {
     }
 
     static void IIDPUSH(String deviceId,String memberEmail,String message_title,String message_body){
-        DatabaseReference mPUSHMaster= FirebaseDatabase.getInstance().getReference("/LOG/PUSH/");
+        DatabaseReference mPUSHMaster= FirebaseDatabase.getInstance().getReference("/LOG/PUSHIID/");
 
         Map<String, Object> message = new HashMap<>();
         message.clear();
