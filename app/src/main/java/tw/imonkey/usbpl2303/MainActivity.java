@@ -16,7 +16,6 @@ import android.util.Log;
 import com.felhr.usbserial.UsbSerialDevice;
 import com.felhr.usbserial.UsbSerialInterface;
 import com.google.android.things.pio.Gpio;
-import com.google.android.things.pio.GpioCallback;
 import com.google.android.things.pio.PeripheralManagerService;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
@@ -26,7 +25,6 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ServerValue;
 import com.google.firebase.database.ValueEventListener;
 
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -124,7 +122,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         TimeZone.setDefault(TimeZone.getTimeZone("Asia/Taipei"));
- //       PeripheralManagerService service = new PeripheralManagerService();
+  //      PeripheralManagerService service = new PeripheralManagerService();
         SharedPreferences settings = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE);
         memberEmail = settings.getString("memberEmail",null);
         deviceId = settings.getString("deviceId",null);
@@ -133,7 +131,7 @@ public class MainActivity extends Activity {
             deviceId="PLC_RS232_test";
             startServer();
         }
-     //   mClear = FirebaseDatabase.getInstance().getReference("/");
+    //    mClear = FirebaseDatabase.getInstance().getReference("/");
     //    mClear.setValue(null);
         mRX = FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/RX/");
         mTX= FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/TX/");
@@ -468,10 +466,10 @@ public class MainActivity extends Activity {
     }
 
     private void alert(String message){
-        NotifyUser.topicsPUSH(deviceId,memberEmail,"智慧機通知",message);
+   //     NotifyUser.topicsPUSH(deviceId,memberEmail,"智慧機通知",message);
         NotifyUser.IIDPUSH(deviceId,memberEmail,"智慧機通知",message);
-        NotifyUser.emailPUSH(deviceId,memberEmail,message);
-        NotifyUser.SMSPUSH(deviceId,memberEmail,message);
+  //      NotifyUser.emailPUSH(deviceId,memberEmail,message);
+   //     NotifyUser.SMSPUSH(deviceId,memberEmail,message);
 
         DatabaseReference mAlertMaster= FirebaseDatabase.getInstance().getReference("/FUI/"+memberEmail.replace(".", "_")+"/"+deviceId+"/alert");
         alert.clear();
