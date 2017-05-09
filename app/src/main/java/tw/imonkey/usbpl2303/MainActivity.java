@@ -129,7 +129,7 @@ public class MainActivity extends Activity {
         memberEmail = settings.getString("memberEmail",null);
         deviceId = settings.getString("deviceId",null);
         if (memberEmail==null) {
-            memberEmail="PLC@test.com";
+            memberEmail="test@po-po.com";
             deviceId="PLC_RS232_test";
             startServer();
         }
