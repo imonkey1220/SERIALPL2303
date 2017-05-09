@@ -72,14 +72,14 @@ public class MainActivity extends Activity {
     //*************firebase*****************
     String memberEmail,deviceId;
     public static final String devicePrefs = "devicePrefs";
-    DatabaseReference  mTX, mRX, mFriend, mRS232Live,presenceRef,lastOnlineRef,connectedRef,connectedRefF;
+    DatabaseReference mClear, mTX, mRX, mFriend, mRS232Live,presenceRef,lastOnlineRef,connectedRef,connectedRefF;
     public MySocketServer mServer;
     private static final int SERVER_PORT = 9402;
     Map<String, Object> alert = new HashMap<>();
 
     //*******PLC****************
-    private Handler handler;
-    Runnable runnable;
+    private Handler handler,handlerTest;
+    Runnable runnable,runnableTest;
     int timer=1000 ;
     String cmd ;
     Map<String, Object> PCMD = new HashMap<>();
@@ -124,6 +124,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         TimeZone.setDefault(TimeZone.getTimeZone("Asia/Taipei"));
+ //       PeripheralManagerService service = new PeripheralManagerService();
         SharedPreferences settings = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE);
         memberEmail = settings.getString("memberEmail",null);
         deviceId = settings.getString("deviceId",null);
@@ -132,8 +133,9 @@ public class MainActivity extends Activity {
             deviceId="PLC_RS232_test";
             startServer();
         }
+     //   mClear = FirebaseDatabase.getInstance().getReference("/");
+    //    mClear.setValue(null);
         mRX = FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/RX/");
-                // "/RS232/"=>"/LOG/RS232/" for firebase functions
         mTX= FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/TX/");
         deviceOnline();
         usbManager = getSystemService(UsbManager.class);
@@ -142,6 +144,7 @@ public class MainActivity extends Activity {
         registerReceiver(usbDetachedReceiver, filter);
         listenUartTX();
         requestDevice();
+        reqDeviceTimerTest();
    //     RESETListener();
 
     }
@@ -159,6 +162,7 @@ public class MainActivity extends Activity {
         unregisterReceiver(usbDetachedReceiver);
         stopUsbConnection();
         EventBus.getDefault().unregister(this);
+        /*
         if (RESETGpio != null) {
             try {
                 RESETGpio.close();
@@ -168,6 +172,7 @@ public class MainActivity extends Activity {
                 RESETGpio = null;
             }
         }
+        */
     }
 /*
     private void RESETListener(){
@@ -446,6 +451,21 @@ public class MainActivity extends Activity {
         };
         handler.postDelayed(runnable, timer);
         }
+
+    private void reqDeviceTimerTest(){
+        cmd="Android Things Test";
+        handlerTest = new Handler();
+        runnableTest = new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                serialDevice.write((STX+cmd+ETX).getBytes());
+                handlerTest.postDelayed(this, timer*10);
+            }
+        };
+        handlerTest.postDelayed(runnableTest, timer*10);
+    }
 
     private void alert(String message){
         NotifyUser.topicsPUSH(deviceId,memberEmail,"智慧機通知",message);
