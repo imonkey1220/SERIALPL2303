@@ -64,10 +64,7 @@ public class MainActivity extends Activity {
     int parity = UsbSerialInterface.PARITY_NONE;
     int flowControl= UsbSerialInterface.FLOW_CONTROL_OFF;
     String buffer = "";
-    //set serialport protocol parameters
-    String STX=new String(new char[]{0x02});
-    String ETX=new String(new char[]{0x0D,0x0A});//0x02:STX,0x03:ETX,0x05:ENQ,0x0A:'/n',0xOD:CR,0x0A:LF,0x3A:':'
-    //*************firebase*****************
+//*******firebase*************
     String memberEmail,deviceId;
     public static final String devicePrefs = "devicePrefs";
     DatabaseReference mClear, mTX, mRX, mFriend, mRS232Live,presenceRef,lastOnlineRef,connectedRef,connectedRefF;
@@ -76,9 +73,28 @@ public class MainActivity extends Activity {
     Map<String, Object> alert = new HashMap<>();
 
     //*******PLC****************
+    //set serialport protocol parameters
+    String STX=new String(new char[]{0x02});
+    String ETX=new String(new char[]{0x03});
+    String ENQ=new String(new char[]{0x05});
+    String newLine=new String(new char[]{0x0D,0x0A});
+    // 0x02:STX,0x03:ETX,0x05:ENQ,0x0A:'/n',0xOD:CR,0x0A:LF,0x3A:':'
+     /*1.PLC & PI 透過 RS232 通訊
+         a.讀取 Bit Data[use M Register]
+            Send Cmd : 0x5 + "00FFBRAM000010" + 0xA + 0xD
+            測試讀取範圍 : M0000 ~ M000F (16點)
+        b.讀取 Word Data[use D Register]
+            Send Cmd : 0x5 + "00FFWRAD000008" + 0xA + 0xD
+            測試讀取範圍 : D0000 ~ M0007 (8點)
+        */
+    String Msg_Word_Rd_Cmd =  "00FFWRAD000010";//  //讀取Word D0000-D0007 Cmd
+    String Msg_Bit_Rd_Cmd  =  "00FFBRAM001010"; //  //讀取Bit  M0000-M0015 Cmd
+    public int ReadType = 0; //0:讀 D Register  1:讀 M Register
+
     private Handler handler,handlerTest;
     Runnable runnable,runnableTest;
     int timer=1000 ;
+
     String cmd ;
     Map<String, Object> PCMD = new HashMap<>();
     private UsbSerialInterface.UsbReadCallback callback = new UsbSerialInterface.UsbReadCallback() {
@@ -131,8 +147,8 @@ public class MainActivity extends Activity {
             deviceId="PLC_RS232_test";
             startServer();
         }
-    //    mClear = FirebaseDatabase.getInstance().getReference("/");
-    //    mClear.setValue(null);
+//        mClear = FirebaseDatabase.getInstance().getReference("/");
+//        mClear.setValue(null);
         mRX = FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/RX/");
         mTX= FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/TX/");
         deviceOnline();
@@ -365,7 +381,7 @@ public class MainActivity extends Activity {
 
                 if (dataSnapshot.child("message").getValue()!= null) {
                     String oneTimeCMD=dataSnapshot.child("message").getValue().toString();
-                    serialDevice.write((STX+oneTimeCMD+ETX).getBytes());
+                    serialDevice.write((ENQ+oneTimeCMD+ETX).getBytes());
                     Log.i(TAG, "Serial data send: " + cmd);
                     //   requestPLC();
                 }
@@ -408,7 +424,7 @@ public class MainActivity extends Activity {
                     if (childSnapshot.child("message").getValue() != null) {
                         PCMD.put(childSnapshot.getKey(),childSnapshot.child("message").getValue());
                         String CMD = snapshot.child("message").getValue().toString();
-                        serialDevice.write((STX + CMD + ETX).getBytes());
+                        serialDevice.write((ENQ + CMD + newLine).getBytes());
                         Log.i(TAG, "Serial data send: " + cmd);
                     }
                     reqTimer();
@@ -434,7 +450,7 @@ public class MainActivity extends Activity {
                 for(String PCMDKey:PCMD.keySet()) {
                     boolean flag=true ;
                     long start,now;
-                    serialDevice.write((STX +PCMD.get(PCMDKey).toString()+ETX).getBytes()); // Async-like operation now! :)
+                    serialDevice.write((ENQ +PCMD.get(PCMDKey).toString()+newLine).getBytes()); // Async-like operation now! :)
                     start=cTime.getTimeInMillis();
                     while(flag){
                         cTime = Calendar.getInstance();
@@ -458,16 +474,31 @@ public class MainActivity extends Activity {
             @Override
             public void run()
             {
-                serialDevice.write((STX+cmd+ETX).getBytes());
-                handlerTest.postDelayed(this, timer*10);
+    //          serialDevice.write((STX+cmd+ETX).getBytes());
+                String Send_Out = "";
+                //
+                //0:讀 D Register  1:讀 M Register
+                if(ReadType == 0) {
+                    Send_Out =ENQ + Msg_Word_Rd_Cmd + newLine;
+                    Log.i(TAG, "讀 D Reg: " + Send_Out);  //記錄資料 :讀 D Reg
+                    ReadType = 1; //下一次讀  M Register
+                }
+                else {
+                    Send_Out = ENQ+ Msg_Bit_Rd_Cmd + newLine;
+                    Log.i(TAG, "讀 M Reg: " + Send_Out);  //記錄資料 :讀 M Reg
+                    ReadType = 0; //下一次讀 D Register
+                }
+                //
+                serialDevice.write(Send_Out.getBytes()); //由 RS232 送出讀取指令
+                handlerTest.postDelayed(this, timer);
             }
         };
-        handlerTest.postDelayed(runnableTest, timer*10);
+        handlerTest.postDelayed(runnableTest, timer);
     }
 
     private void alert(String message){
    //     NotifyUser.topicsPUSH(deviceId,memberEmail,"智慧機通知",message);
-        NotifyUser.IIDPUSH(deviceId,memberEmail,"智慧機通知",message);
+    //    NotifyUser.IIDPUSH(deviceId,memberEmail,"智慧機通知",message);
   //      NotifyUser.emailPUSH(deviceId,memberEmail,message);
    //     NotifyUser.SMSPUSH(deviceId,memberEmail,message);
 
