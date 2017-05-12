@@ -33,6 +33,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -95,10 +96,11 @@ public class MainActivity extends Activity {
 
     private Handler handler,handlerTest;
     Runnable runnable,runnableTest;
+    int countPCMD=0;
     int timer=1000 ;
 
     String cmd ;
-    Map<String, Object> PCMD = new HashMap<>();
+    ArrayList<String> PCMD = new ArrayList<>();
     private UsbSerialInterface.UsbReadCallback callback = new UsbSerialInterface.UsbReadCallback() {
         @Override
         public void onReceivedData(byte[] data) {
@@ -377,7 +379,6 @@ public class MainActivity extends Activity {
         mTX.addChildEventListener(new ChildEventListener() {
             @Override
             public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-
                 if (dataSnapshot.child("message").getValue()!= null) {
                     String oneTimeCMD=dataSnapshot.child("message").getValue().toString();
                     serialDevice.write((ENQ+oneTimeCMD+ETX).getBytes());
@@ -418,10 +419,10 @@ public class MainActivity extends Activity {
             public void onDataChange(DataSnapshot snapshot) {
                 for (DataSnapshot childSnapshot : snapshot.getChildren()) {
                     if (childSnapshot.child("message").getValue() != null) {
-                        PCMD.put(childSnapshot.getKey(),childSnapshot.child("message").getValue());
+                        PCMD.add(childSnapshot.child("message").getValue().toString());
                         String CMD = snapshot.child("message").getValue().toString();
                         serialDevice.write((ENQ + CMD + newLine).getBytes());
-                        Log.i(TAG, "Serial data send: " + cmd);
+                        Log.i(TAG, "Serial data send: " + CMD);
                     }
                     reqTimer();
                 }
@@ -430,36 +431,27 @@ public class MainActivity extends Activity {
             public void onCancelled(DatabaseError databaseError) {}
         });
     }
-    private void reqTimer(){
-        if (handler!=null){
-            handler=null;
+    private void reqTimer() {
+        if (handler != null) {
+            handler = null;
         }
         handler = new Handler();
-        runnable = new Runnable()
-        {
+        runnable = new Runnable() {
             @Override
-            public void run()
-            {
-            //  String cmd="Android Things";
-            //    serialDevice.write((STX+cmd+ETX).getBytes());
-                Calendar cTime = Calendar.getInstance();
-                for(String PCMDKey:PCMD.keySet()) {
-                    boolean flag=true ;
-                    long start,now;
-                    serialDevice.write((ENQ +PCMD.get(PCMDKey).toString()+newLine).getBytes()); // Async-like operation now! :)
-                    start=cTime.getTimeInMillis();
-                    while(flag){
-                        cTime = Calendar.getInstance();
-                        now=cTime.getTimeInMillis();
-                        if ((now-start)>100){
-                            flag=false;
-                        }
-                    }
-                }
-              handler.postDelayed(this, timer);
+            public void run() {
+                //  String cmd="Android Things";
+                //  serialDevice.write((STX+cmd+ETX).getBytes());
+
+                serialDevice.write((ENQ+PCMD.get(countPCMD)+newLine).getBytes()); // Async-like operation now! :)
+               if(countPCMD<PCMD.size()){
+                   countPCMD++;
+               }else{
+                   countPCMD=0;
+               }
+                handler.postDelayed(this, timer);
             }
-        };
-        handler.postDelayed(runnable, timer);
+          };
+            handler.postDelayed(runnable,timer);
         }
 
     private void reqDeviceTimerTest(){
