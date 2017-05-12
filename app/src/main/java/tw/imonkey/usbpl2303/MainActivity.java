@@ -16,6 +16,7 @@ import android.util.Log;
 import com.felhr.usbserial.UsbSerialDevice;
 import com.felhr.usbserial.UsbSerialInterface;
 import com.google.android.things.pio.Gpio;
+import com.google.android.things.pio.GpioCallback;
 import com.google.android.things.pio.PeripheralManagerService;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
@@ -25,6 +26,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ServerValue;
 import com.google.firebase.database.ValueEventListener;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -85,7 +87,7 @@ public class MainActivity extends Activity {
             測試讀取範圍 : M0000 ~ M000F (16點)
         b.讀取 Word Data[use D Register]
             Send Cmd : 0x5 + "00FFWRAD000008" + 0xA + 0xD
-            測試讀取範圍 : D0000 ~ M0007 (8點)
+            測試讀取範圍 : D0000 ~ D0007 (8點)
         */
     String Msg_Word_Rd_Cmd =  "00FFWRAD000010";//  //讀取Word D0000-D0007 Cmd
     String Msg_Bit_Rd_Cmd  =  "00FFBRAM001010"; //  //讀取Bit  M0000-M0015 Cmd
@@ -138,7 +140,6 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         TimeZone.setDefault(TimeZone.getTimeZone("Asia/Taipei"));
-  //      PeripheralManagerService service = new PeripheralManagerService();
         SharedPreferences settings = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE);
         memberEmail = settings.getString("memberEmail",null);
         deviceId = settings.getString("deviceId",null);
@@ -159,7 +160,7 @@ public class MainActivity extends Activity {
         listenUartTX();
         requestDevice();
         reqDeviceTimerTest();
-   //     RESETListener();
+        RESETListener();
 
     }
 
@@ -176,7 +177,7 @@ public class MainActivity extends Activity {
         unregisterReceiver(usbDetachedReceiver);
         stopUsbConnection();
         EventBus.getDefault().unregister(this);
-        /*
+
         if (RESETGpio != null) {
             try {
                 RESETGpio.close();
@@ -186,9 +187,9 @@ public class MainActivity extends Activity {
                 RESETGpio = null;
             }
         }
-        */
+
     }
-/*
+
     private void RESETListener(){
         PeripheralManagerService service = new PeripheralManagerService();
         try {
@@ -212,9 +213,7 @@ public class MainActivity extends Activity {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
-    */
 
     private void startUsbConnection() {
         Map<String, UsbDevice> connectedDevices = usbManager.getDeviceList();
@@ -398,25 +397,22 @@ public class MainActivity extends Activity {
     }
     private void deviceRespond(String data){
         //todo: data parser
-        if (data.contains("A")) {
-            alert(data); // alert client.
-            Map<String, Object> RX = new HashMap<>();
-            RX.clear();
-            RX.put("message", data);
-            RX.put("timeStamp", ServerValue.TIMESTAMP);
-            mRX.push().setValue(RX);
-        }else if(data.contains("L")){
-            Map<String, Object> RX = new HashMap<>();
-            RX.clear();
-            RX.put("message", data);
-            RX.put("timeStamp", ServerValue.TIMESTAMP);
-            mRX.push().setValue(RX);
+        if (data.contains("00FF")) {
+            String registerData =data.replaceAll("00FF","");
+            if (Integer.parseInt(registerData)!=0) {
+                alert(registerData); // alert client.
+                Map<String, Object> RX = new HashMap<>();
+                RX.clear();
+                RX.put("message", registerData);
+                RX.put("timeStamp", ServerValue.TIMESTAMP);
+                mRX.push().setValue(RX);
+            }
         }
     }
 
     private void requestDevice(){
         PCMD.clear();
-        DatabaseReference  mRequest= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/REQ/");
+        DatabaseReference  mRequest= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/SETTINGS/CMD/");
         mRequest.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
