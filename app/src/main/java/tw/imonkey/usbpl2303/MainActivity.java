@@ -15,9 +15,6 @@ import android.util.Log;
 
 import com.felhr.usbserial.UsbSerialDevice;
 import com.felhr.usbserial.UsbSerialInterface;
-import com.google.android.things.pio.Gpio;
-import com.google.android.things.pio.GpioCallback;
-import com.google.android.things.pio.PeripheralManagerService;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -26,7 +23,6 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ServerValue;
 import com.google.firebase.database.ValueEventListener;
 
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -34,7 +30,6 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -45,8 +40,6 @@ import de.greenrobot.event.EventBus;
 
 
 public class MainActivity extends Activity {
-    private Gpio RESETGpio;
-    String RESET="BCM26";
     //**************USBSerialPort
     private static final String TAG = MainActivity.class.getSimpleName();
     //   private static final int USB_VENDOR_ID = 0x0403;//arduino nano FT232RL
@@ -98,6 +91,7 @@ public class MainActivity extends Activity {
     Runnable runnable,runnableTest;
     int countPCMD=0;
     int timer=1000 ;
+    boolean oneTimeCMDCheck=false;
 
     String cmd ;
     ArrayList<String> PCMD = new ArrayList<>();
@@ -150,19 +144,19 @@ public class MainActivity extends Activity {
             deviceId="PLC_RS232_test";
             startServer();
         }
-//        mClear = FirebaseDatabase.getInstance().getReference("/");
-//        mClear.setValue(null);
-        mRX = FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/RX/");
-        mTX= FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/TX/");
-        deviceOnline();
         usbManager = getSystemService(UsbManager.class);
             // Detach events are sent as a system-wide broadcast
         IntentFilter filter = new IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED);
         registerReceiver(usbDetachedReceiver, filter);
+
+        // mClear = FirebaseDatabase.getInstance().getReference("/");
+        // mClear.setValue(null);
+        mRX = FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/RX/");
+        mTX = FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/TX/");
+        deviceOnline();
         listenUartTX();
         requestDevice();
         reqDeviceTimerTest();
-        RESETListener();
 
     }
 
@@ -180,41 +174,6 @@ public class MainActivity extends Activity {
         stopUsbConnection();
         EventBus.getDefault().unregister(this);
 
-        if (RESETGpio != null) {
-            try {
-                RESETGpio.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                RESETGpio = null;
-            }
-        }
-
-    }
-
-    private void RESETListener(){
-        PeripheralManagerService service = new PeripheralManagerService();
-        try {
-            RESETGpio = service.openGpio(RESET);
-            RESETGpio.setDirection(Gpio.DIRECTION_IN);
-            RESETGpio.setEdgeTriggerType(Gpio.EDGE_BOTH);
-            RESETGpio.registerGpioCallback(new GpioCallback() {
-                @Override
-                public boolean onGpioEdge(Gpio gpio) {
-
-                    try {
-                        if (RESETGpio.getValue()){
-                            startServer();
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    return true;
-                }
-            });
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     private void startUsbConnection() {
@@ -382,8 +341,8 @@ public class MainActivity extends Activity {
                 if (dataSnapshot.child("message").getValue()!= null) {
                     String oneTimeCMD=dataSnapshot.child("message").getValue().toString();
                     serialDevice.write((ENQ+oneTimeCMD+ETX).getBytes());
+                    oneTimeCMDCheck=true;
                     Log.i(TAG, "Serial data send: " + cmd);
-                    //   requestPLC();
                 }
             }
             @Override
@@ -397,12 +356,20 @@ public class MainActivity extends Activity {
         });
     }
     private void deviceRespond(String data){
-        //todo: data parser
+        Map<String, Object> RX = new HashMap<>();
+        if(oneTimeCMDCheck){
+            oneTimeCMDCheck=false;
+            RX.clear();
+            RX.put("message", data.replaceAll("00FF",""));
+            RX.put("timeStamp", ServerValue.TIMESTAMP);
+            mRX.push().setValue(RX);
+        }
+
         if (data.contains("00FF")) {
             String registerData =data.replaceAll("00FF","");
             if (Integer.parseInt(registerData)!=0) {
                 alert(registerData); // alert client.
-                Map<String, Object> RX = new HashMap<>();
+
                 RX.clear();
                 RX.put("message", registerData);
                 RX.put("timeStamp", ServerValue.TIMESTAMP);
@@ -418,9 +385,9 @@ public class MainActivity extends Activity {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
                 for (DataSnapshot childSnapshot : snapshot.getChildren()) {
-                    if (childSnapshot.child("message").getValue() != null) {
-                        PCMD.add(childSnapshot.child("message").getValue().toString());
-                        String CMD = snapshot.child("message").getValue().toString();
+                    if (childSnapshot.getValue() != null) {
+                        String CMD = snapshot.getValue().toString();
+                        PCMD.add(CMD);
                         serialDevice.write((ENQ + CMD + newLine).getBytes());
                         Log.i(TAG, "Serial data send: " + CMD);
                     }
