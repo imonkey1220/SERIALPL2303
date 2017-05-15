@@ -63,7 +63,7 @@ public class MainActivity extends Activity {
 //*******firebase*************
     String memberEmail,deviceId;
     public static final String devicePrefs = "devicePrefs";
-    DatabaseReference mClear, mTX, mRX, mFriend, mRS232Live,presenceRef,lastOnlineRef,connectedRef,connectedRefF;
+    DatabaseReference  mTX, mRX, mFriend, mRS232Live,presenceRef,lastOnlineRef,connectedRef,connectedRefF;
     public MySocketServer mServer;
     private static final int SERVER_PORT = 9402;
     Map<String, Object> alert = new HashMap<>();
@@ -74,27 +74,18 @@ public class MainActivity extends Activity {
     String ETX=new String(new char[]{0x03});
     String ENQ=new String(new char[]{0x05});
     String newLine=new String(new char[]{0x0D,0x0A});
-    // 0x02:STX,0x03:ETX,0x05:ENQ,0x0A:'/n',0xOD:CR,0x0A:LF,0x3A:':'
-     /*1.PLC & PI 透過 RS232 通訊
-         a.讀取 Bit Data[use M Register]
-            Send Cmd : 0x5 + "00FFBRAM000010" + 0xA + 0xD
-            測試讀取範圍 : M0000 ~ M000F (16點)
-        b.讀取 Word Data[use D Register]
-            Send Cmd : 0x5 + "00FFWRAD000008" + 0xA + 0xD
-            測試讀取範圍 : D0000 ~ D0007 (8點)
-        */
-    String Msg_Word_Rd_Cmd =  "00FFWRAD000010";//  //讀取Word D0000-D0007 Cmd
-    String Msg_Bit_Rd_Cmd  =  "00FFBRAM001010"; //  //讀取Bit  M0000-M0015 Cmd
-    public int ReadType = 0; //0:讀 D Register  1:讀 M Register
+    //test: read D,M redister
+    String Msg_Word_Rd_Cmd =  "00FFWRAD000010";
+    String Msg_Bit_Rd_Cmd  =  "00FFBRAM001010";
+    public int ReadType = 0; //0:read D Register  1:read M Register
 
     private Handler handler,handlerTest;
     Runnable runnable,runnableTest;
     int countPCMD=0;
     int timer=1000 ;
     boolean oneTimeCMDCheck=false;
-
-    String cmd ;
     ArrayList<String> PCMD = new ArrayList<>();
+
     private UsbSerialInterface.UsbReadCallback callback = new UsbSerialInterface.UsbReadCallback() {
         @Override
         public void onReceivedData(byte[] data) {
@@ -143,21 +134,18 @@ public class MainActivity extends Activity {
             memberEmail="test@po-po.com";
             deviceId="PLC_RS232_test";
             startServer();
+            reqDeviceTimerTest();
         }
         usbManager = getSystemService(UsbManager.class);
             // Detach events are sent as a system-wide broadcast
         IntentFilter filter = new IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED);
         registerReceiver(usbDetachedReceiver, filter);
 
-        // mClear = FirebaseDatabase.getInstance().getReference("/");
-        // mClear.setValue(null);
         mRX = FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/RX/");
         mTX = FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/TX/");
         deviceOnline();
         listenUartTX();
         requestDevice();
-        reqDeviceTimerTest();
-
     }
 
     @Override
@@ -230,6 +218,142 @@ public class MainActivity extends Activity {
             serialDevice = null;
             connection = null;
         }
+    }
+
+    private void listenUartTX() {
+        mTX.addChildEventListener(new ChildEventListener() {
+            @Override
+            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                if (dataSnapshot.child("message").getValue()!= null) {
+                    String oneTimeCMD=dataSnapshot.child("message").getValue().toString();
+                    serialDevice.write((ENQ+oneTimeCMD+ETX).getBytes());
+                    oneTimeCMDCheck=true;
+                    Log.i(TAG, "Serial data send: " + oneTimeCMD);
+                }
+            }
+            @Override
+            public void onChildRemoved(DataSnapshot dataSnapshot) {}
+            @Override
+            public void onChildMoved(DataSnapshot dataSnapshot, String s) {}
+            @Override
+            public void onChildChanged(DataSnapshot dataSnapshot, String s) {}
+            @Override
+            public void onCancelled(DatabaseError databaseError) {}
+        });
+    }
+
+    private void deviceRespond(String data){
+        Map<String, Object> RX = new HashMap<>();
+        if(oneTimeCMDCheck){
+            oneTimeCMDCheck=false;
+            RX.clear();
+            RX.put("message", data.replaceAll("00FF",""));
+            RX.put("timeStamp", ServerValue.TIMESTAMP);
+            mRX.push().setValue(RX);
+        }
+
+        if (data.contains("00FF")) {
+            String registerData =data.replaceAll("00FF","");
+            if (Integer.parseInt(registerData)!=0) {
+                alert(registerData); // alert client.
+
+                RX.clear();
+                RX.put("message", registerData);
+                RX.put("timeStamp", ServerValue.TIMESTAMP);
+                mRX.push().setValue(RX);
+            }
+        }
+    }
+
+    private void requestDevice(){
+        PCMD.clear();
+        DatabaseReference  mRequest= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/SETTINGS/CMD/");
+        mRequest.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                for (DataSnapshot childSnapshot : snapshot.getChildren()) {
+                    if (childSnapshot.getValue() != null) {
+                        String CMD = snapshot.getValue().toString();
+                        PCMD.add(CMD);
+                        serialDevice.write((ENQ + CMD + newLine).getBytes());
+                        Log.i(TAG, "Serial data send: " + CMD);
+                    }
+                    reqTimer();
+                }
+            }
+            @Override
+            public void onCancelled(DatabaseError databaseError) {}
+        });
+    }
+
+    private void reqTimer() {
+        if (handler != null) {
+            handler = null;
+        }
+        handler = new Handler();
+        runnable = new Runnable() {
+            @Override
+            public void run() {
+                serialDevice.write((ENQ+PCMD.get(countPCMD)+newLine).getBytes()); // Async-like operation now! :)
+               if(countPCMD<PCMD.size()){
+                   countPCMD++;
+               }else{
+                   countPCMD=0;
+               }
+                handler.postDelayed(this, timer);
+            }
+          };
+            handler.postDelayed(runnable,timer);
+        }
+
+    private void reqDeviceTimerTest(){
+        handlerTest = new Handler();
+        runnableTest = new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                String Send_Out;
+                if(ReadType == 0) {
+                    Send_Out =ENQ + Msg_Word_Rd_Cmd + newLine;
+                    Log.i(TAG, " D Reg: " + Send_Out);
+                    ReadType = 1;
+                }
+                else {
+                    Send_Out = ENQ+ Msg_Bit_Rd_Cmd + newLine;
+                    Log.i(TAG, " M Reg: " + Send_Out);
+                    ReadType = 0;
+                }
+                serialDevice.write(Send_Out.getBytes());
+                handlerTest.postDelayed(this, timer);
+            }
+        };
+        handlerTest.postDelayed(runnableTest, timer);
+    }
+
+    private void alert(String message){
+        NotifyUser.topicsPUSH(deviceId,memberEmail,"智慧機通知",message);
+        NotifyUser.IIDPUSH(deviceId,memberEmail,"智慧機通知",message);
+        NotifyUser.emailPUSH(deviceId,memberEmail,message);
+        NotifyUser.SMSPUSH(deviceId,memberEmail,message);
+
+        DatabaseReference mAlertMaster= FirebaseDatabase.getInstance().getReference("/FUI/"+memberEmail.replace(".", "_")+"/"+deviceId+"/alert");
+        alert.clear();
+        alert.put("message",message);
+        alert.put("timeStamp", ServerValue.TIMESTAMP);
+        mAlertMaster.setValue(alert);
+        DatabaseReference mFriend= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/friend");
+        mFriend.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                for (DataSnapshot childSnapshot : snapshot.getChildren()) {
+                    DatabaseReference mAlertFriend= FirebaseDatabase.getInstance().getReference("/FUI/"+childSnapshot.getValue().toString().replace(".", "_")+"/"+deviceId+"/alert");
+                    mAlertFriend.setValue(alert);
+                }
+            }
+            @Override
+            public void onCancelled(DatabaseError databaseError) {}
+        });
     }
 
     // websocket server
@@ -328,146 +452,6 @@ public class MainActivity extends Activity {
                         public void onCancelled(DatabaseError error) {
                         }
                     });
-                }
-            }
-            @Override
-            public void onCancelled(DatabaseError databaseError) {}
-        });
-    }
-    private void listenUartTX() {
-        mTX.addChildEventListener(new ChildEventListener() {
-            @Override
-            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-                if (dataSnapshot.child("message").getValue()!= null) {
-                    String oneTimeCMD=dataSnapshot.child("message").getValue().toString();
-                    serialDevice.write((ENQ+oneTimeCMD+ETX).getBytes());
-                    oneTimeCMDCheck=true;
-                    Log.i(TAG, "Serial data send: " + cmd);
-                }
-            }
-            @Override
-            public void onChildRemoved(DataSnapshot dataSnapshot) {}
-            @Override
-            public void onChildMoved(DataSnapshot dataSnapshot, String s) {}
-            @Override
-            public void onChildChanged(DataSnapshot dataSnapshot, String s) {}
-            @Override
-            public void onCancelled(DatabaseError databaseError) {}
-        });
-    }
-    private void deviceRespond(String data){
-        Map<String, Object> RX = new HashMap<>();
-        if(oneTimeCMDCheck){
-            oneTimeCMDCheck=false;
-            RX.clear();
-            RX.put("message", data.replaceAll("00FF",""));
-            RX.put("timeStamp", ServerValue.TIMESTAMP);
-            mRX.push().setValue(RX);
-        }
-
-        if (data.contains("00FF")) {
-            String registerData =data.replaceAll("00FF","");
-            if (Integer.parseInt(registerData)!=0) {
-                alert(registerData); // alert client.
-
-                RX.clear();
-                RX.put("message", registerData);
-                RX.put("timeStamp", ServerValue.TIMESTAMP);
-                mRX.push().setValue(RX);
-            }
-        }
-    }
-
-    private void requestDevice(){
-        PCMD.clear();
-        DatabaseReference  mRequest= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/SETTINGS/CMD/");
-        mRequest.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot snapshot) {
-                for (DataSnapshot childSnapshot : snapshot.getChildren()) {
-                    if (childSnapshot.getValue() != null) {
-                        String CMD = snapshot.getValue().toString();
-                        PCMD.add(CMD);
-                        serialDevice.write((ENQ + CMD + newLine).getBytes());
-                        Log.i(TAG, "Serial data send: " + CMD);
-                    }
-                    reqTimer();
-                }
-            }
-            @Override
-            public void onCancelled(DatabaseError databaseError) {}
-        });
-    }
-    private void reqTimer() {
-        if (handler != null) {
-            handler = null;
-        }
-        handler = new Handler();
-        runnable = new Runnable() {
-            @Override
-            public void run() {
-                //  String cmd="Android Things";
-                //  serialDevice.write((STX+cmd+ETX).getBytes());
-
-                serialDevice.write((ENQ+PCMD.get(countPCMD)+newLine).getBytes()); // Async-like operation now! :)
-               if(countPCMD<PCMD.size()){
-                   countPCMD++;
-               }else{
-                   countPCMD=0;
-               }
-                handler.postDelayed(this, timer);
-            }
-          };
-            handler.postDelayed(runnable,timer);
-        }
-
-    private void reqDeviceTimerTest(){
-        cmd="Android Things Test";
-        handlerTest = new Handler();
-        runnableTest = new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                String Send_Out = "";
-                //
-                //0:讀 D Register  1:讀 M Register
-                if(ReadType == 0) {
-                    Send_Out =ENQ + Msg_Word_Rd_Cmd + newLine;
-                    Log.i(TAG, "讀 D Reg: " + Send_Out);  //記錄資料 :讀 D Reg
-                    ReadType = 1; //下一次讀  M Register
-                }
-                else {
-                    Send_Out = ENQ+ Msg_Bit_Rd_Cmd + newLine;
-                    Log.i(TAG, "讀 M Reg: " + Send_Out);  //記錄資料 :讀 M Reg
-                    ReadType = 0; //下一次讀 D Register
-                }
-                //
-                serialDevice.write(Send_Out.getBytes()); //由 RS232 送出讀取指令
-                handlerTest.postDelayed(this, timer);
-            }
-        };
-        handlerTest.postDelayed(runnableTest, timer);
-    }
-
-    private void alert(String message){
-   //     NotifyUser.topicsPUSH(deviceId,memberEmail,"智慧機通知",message);
-    //    NotifyUser.IIDPUSH(deviceId,memberEmail,"智慧機通知",message);
-  //      NotifyUser.emailPUSH(deviceId,memberEmail,message);
-   //     NotifyUser.SMSPUSH(deviceId,memberEmail,message);
-
-        DatabaseReference mAlertMaster= FirebaseDatabase.getInstance().getReference("/FUI/"+memberEmail.replace(".", "_")+"/"+deviceId+"/alert");
-        alert.clear();
-        alert.put("message",message);
-        alert.put("timeStamp", ServerValue.TIMESTAMP);
-        mAlertMaster.setValue(alert);
-        DatabaseReference mFriend= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/friend");
-        mFriend.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot snapshot) {
-                for (DataSnapshot childSnapshot : snapshot.getChildren()) {
-                    DatabaseReference mAlertFriend= FirebaseDatabase.getInstance().getReference("/FUI/"+childSnapshot.getValue().toString().replace(".", "_")+"/"+deviceId+"/alert");
-                    mAlertFriend.setValue(alert);
                 }
             }
             @Override
