@@ -429,7 +429,6 @@ public class MainActivity extends Activity {
             @Override
             public void run()
             {
-    //          serialDevice.write((STX+cmd+ETX).getBytes());
                 String Send_Out = "";
                 //
                 //0:讀 D Register  1:讀 M Register
