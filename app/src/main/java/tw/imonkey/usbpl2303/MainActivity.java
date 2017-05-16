@@ -63,10 +63,11 @@ public class MainActivity extends Activity {
 //*******firebase*************
     String memberEmail,deviceId;
     public static final String devicePrefs = "devicePrefs";
-    DatabaseReference  mTX, mRX, mFriend, mRS232Live,presenceRef,lastOnlineRef,connectedRef,connectedRefF;
+    DatabaseReference  mTX, mRX, mFriends, mRS232Live,presenceRef,lastOnlineRef,connectedRef,connectedRefF;
     public MySocketServer mServer;
     private static final int SERVER_PORT = 9402;
     Map<String, Object> alert = new HashMap<>();
+    ArrayList<String> friends = new ArrayList<>();
 
     //*******PLC****************
     //set serialport protocol parameters
@@ -76,7 +77,7 @@ public class MainActivity extends Activity {
     String newLine=new String(new char[]{0x0D,0x0A});
     //test: read D,M redister
     String Msg_Word_Rd_Cmd =  "00FFWRAD000010";
-    String Msg_Bit_Rd_Cmd  =  "00FFBRAM001010";
+    String Msg_Bit_Rd_Cmd  =  "00FFBRAM000010";
     public int ReadType = 0; //0:read D Register  1:read M Register
 
     private Handler handler,handlerTest;
@@ -143,6 +144,20 @@ public class MainActivity extends Activity {
 
         mRX = FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/RX/");
         mTX = FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/TX/");
+        mFriends= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/friend");
+        mFriends.orderByKey().addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                friends.clear();
+                for (DataSnapshot childSnapshot : snapshot.getChildren()) {
+                    friends.add(childSnapshot.getValue().toString());
+                }
+            }
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+            }
+        });
+
         deviceOnline();
         listenUartTX();
         requestDevice();
@@ -332,10 +347,17 @@ public class MainActivity extends Activity {
     }
 
     private void alert(String message){
-        NotifyUser.topicsPUSH(deviceId,memberEmail,"智慧機通知",message);
-        NotifyUser.IIDPUSH(deviceId,memberEmail,"智慧機通知",message);
-        NotifyUser.emailPUSH(deviceId,memberEmail,message);
-        NotifyUser.SMSPUSH(deviceId,memberEmail,message);
+
+        NotifyUser.topicsPUSH(deviceId, memberEmail, "智慧機通知", message);
+        NotifyUser.IIDPUSH(deviceId, memberEmail, "智慧機通知", message);
+        NotifyUser.emailPUSH(deviceId, memberEmail, message);
+        NotifyUser.SMSPUSH(deviceId, memberEmail, message);
+        for (String email : friends ) {
+            NotifyUser.topicsPUSH(deviceId, email, "智慧機通知", message);
+            NotifyUser.IIDPUSH(deviceId, email, "智慧機通知", message);
+            NotifyUser.emailPUSH(deviceId, email, message);
+            NotifyUser.SMSPUSH(deviceId, email, message);
+        }
 
         DatabaseReference mAlertMaster= FirebaseDatabase.getInstance().getReference("/FUI/"+memberEmail.replace(".", "_")+"/"+deviceId+"/alert");
         alert.clear();
@@ -431,8 +453,8 @@ public class MainActivity extends Activity {
             }
         });
 
-        mFriend= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/friend"); //for friend's main activity
-        mFriend.addValueEventListener(new ValueEventListener() {
+         //send connection to friend's main activity
+        mFriends.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
                 for (DataSnapshot childSnapshot : snapshot.getChildren()) {
