@@ -144,19 +144,6 @@ public class MainActivity extends Activity {
 
         mRX = FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/RX/");
         mTX = FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/TX/");
-        mFriends= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/friend");
-        mFriends.orderByKey().addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot snapshot) {
-                friends.clear();
-                for (DataSnapshot childSnapshot : snapshot.getChildren()) {
-                    friends.add(childSnapshot.getValue().toString());
-                }
-            }
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-            }
-        });
 
         deviceOnline();
         listenUartTX();
@@ -454,10 +441,15 @@ public class MainActivity extends Activity {
         });
 
          //send connection to friend's main activity
+        mFriends= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/friend");
         mFriends.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
+                friends.clear();
                 for (DataSnapshot childSnapshot : snapshot.getChildren()) {
+
+                    friends.add(childSnapshot.getValue().toString());
+
                     final DatabaseReference presenceRefToFirends= FirebaseDatabase.getInstance().getReference("/FUI/"+childSnapshot.getValue().toString().replace(".", "_")+"/"+deviceId+"/connection");
                     presenceRefToFirends.setValue(true);
                     presenceRefToFirends.onDisconnect().setValue(null);
