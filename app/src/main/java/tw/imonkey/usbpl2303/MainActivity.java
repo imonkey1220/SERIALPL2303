@@ -351,18 +351,10 @@ public class MainActivity extends Activity {
         alert.put("message",message);
         alert.put("timeStamp", ServerValue.TIMESTAMP);
         mAlertMaster.setValue(alert);
-        DatabaseReference mFriend= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/friend");
-        mFriend.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot snapshot) {
-                for (DataSnapshot childSnapshot : snapshot.getChildren()) {
-                    DatabaseReference mAlertFriend= FirebaseDatabase.getInstance().getReference("/FUI/"+childSnapshot.getValue().toString().replace(".", "_")+"/"+deviceId+"/alert");
-                    mAlertFriend.setValue(alert);
-                }
-            }
-            @Override
-            public void onCancelled(DatabaseError databaseError) {}
-        });
+        for (String email : friends ) {
+            DatabaseReference mAlertFriend= FirebaseDatabase.getInstance().getReference("/FUI/"+email.replace(".", "_")+"/"+deviceId+"/alert");
+            mAlertFriend.setValue(alert);
+        }
     }
 
     // websocket server
