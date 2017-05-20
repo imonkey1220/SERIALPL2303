@@ -297,7 +297,7 @@ public class MainActivity extends Activity {
             @Override
             public void run() {
                 serialDevice.write((ENQ+PCMD.get(countPCMD)+newLine).getBytes()); // Async-like operation now! :)
-               if(countPCMD<PCMD.size()){
+                if(countPCMD<(PCMD.size()-1)){
                    countPCMD++;
                }else{
                    countPCMD=0;
