@@ -254,6 +254,16 @@ public class MainActivity extends Activity {
             RX.put("timeStamp", ServerValue.TIMESTAMP);
             mRX.push().setValue(RX);
         }
+//test Alert
+        if (data.contains("Android")) {
+            alert(data); // alert client.
+            RX.clear();
+            RX.put("message", data);
+            RX.put("timeStamp", ServerValue.TIMESTAMP);
+            mRX.push().setValue(RX);
+
+
+        }
 /*
         if (data.contains("00FF")) {
             String registerData =data.replaceAll("00FF","");
