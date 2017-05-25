@@ -63,7 +63,7 @@ public class MainActivity extends Activity {
 //*******firebase*************
     String memberEmail,deviceId;
     public static final String devicePrefs = "devicePrefs";
-    DatabaseReference  mTX, mRX, mFriends, mRS232Live,presenceRef,lastOnlineRef,connectedRef,connectedRefF;
+    DatabaseReference  mRequest, mTX, mRX, mFriends, mRS232Live,presenceRef,lastOnlineRef,connectedRef,connectedRefF;
     public MySocketServer mServer;
     private static final int SERVER_PORT = 9402;
     Map<String, Object> alert = new HashMap<>();
@@ -135,7 +135,7 @@ public class MainActivity extends Activity {
             memberEmail="test@po-po.com";
             deviceId="PLC_RS232_test";
             startServer();
-            reqDeviceTimerTest();
+    //        reqDeviceTimerTest();
         }
         usbManager = getSystemService(UsbManager.class);
             // Detach events are sent as a system-wide broadcast
@@ -148,6 +148,7 @@ public class MainActivity extends Activity {
         deviceOnline();
         listenUartTX();
         requestDevice();
+        reqTimer();
     }
 
     @Override
@@ -223,7 +224,7 @@ public class MainActivity extends Activity {
     }
 
     private void listenUartTX() {
-        mTX.addChildEventListener(new ChildEventListener() {
+        mTX.limitToLast(1).addChildEventListener(new ChildEventListener() {
             @Override
             public void onChildAdded(DataSnapshot dataSnapshot, String s) {
                 if (dataSnapshot.child("message").getValue()!= null) {
@@ -253,7 +254,7 @@ public class MainActivity extends Activity {
             RX.put("timeStamp", ServerValue.TIMESTAMP);
             mRX.push().setValue(RX);
         }
-
+/*
         if (data.contains("00FF")) {
             String registerData =data.replaceAll("00FF","");
             if (Integer.parseInt(registerData)!=0) {
@@ -265,22 +266,23 @@ public class MainActivity extends Activity {
                 mRX.push().setValue(RX);
             }
         }
+        */
     }
 
     private void requestDevice(){
-        PCMD.clear();
-        DatabaseReference  mRequest= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/SETTINGS/CMD/");
+        mRequest= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/SETTINGS/CMD/");
         mRequest.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
+                PCMD.clear();
                 for (DataSnapshot childSnapshot : snapshot.getChildren()) {
                     if (childSnapshot.getValue() != null) {
-                        String CMD = snapshot.getValue().toString();
+                        String CMD = childSnapshot.getValue().toString();
                         PCMD.add(CMD);
                         serialDevice.write((ENQ + CMD + newLine).getBytes());
                         Log.i(TAG, "Serial data send: " + CMD);
                     }
-                    reqTimer();
+ //                   reqTimer();
                 }
             }
             @Override
@@ -296,12 +298,15 @@ public class MainActivity extends Activity {
         runnable = new Runnable() {
             @Override
             public void run() {
-                serialDevice.write((ENQ+PCMD.get(countPCMD)+newLine).getBytes()); // Async-like operation now! :)
-                if(countPCMD<(PCMD.size()-1)){
-                   countPCMD++;
-               }else{
-                   countPCMD=0;
-               }
+                if(PCMD.size()>0) {
+                    serialDevice.write((ENQ + PCMD.get(countPCMD) + newLine).getBytes()); // Async-like operation now! :)
+                    Log.i(TAG, "Serial data send:"+PCMD.get(countPCMD));
+                    if (countPCMD < (PCMD.size() - 1)) {
+                        countPCMD++;
+                    } else {
+                        countPCMD = 0;
+                    }
+                }
                 handler.postDelayed(this, timer);
             }
           };
