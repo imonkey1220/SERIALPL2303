@@ -250,7 +250,8 @@ public class MainActivity extends Activity {
         if(oneTimeCMDCheck){
             oneTimeCMDCheck=false;
             RX.clear();
-            RX.put("message", data.replaceAll("00FF",""));
+       //     RX.put("message", data.replaceAll("00FF",""));
+            RX.put("message", data);
             RX.put("timeStamp", ServerValue.TIMESTAMP);
             mRX.push().setValue(RX);
         }
