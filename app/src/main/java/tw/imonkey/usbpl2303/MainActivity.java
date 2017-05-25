@@ -59,14 +59,15 @@ public class MainActivity extends Activity {
     int stopBits = UsbSerialInterface.STOP_BITS_1;
     int parity = UsbSerialInterface.PARITY_NONE;
     int flowControl= UsbSerialInterface.FLOW_CONTROL_OFF;
-    String buffer = "";
+    String buffer = "" , CMD = "";
 //*******firebase*************
-    String memberEmail,deviceId,CMD;
+    String memberEmail,deviceId;
     public static final String devicePrefs = "devicePrefs";
     DatabaseReference  mRequest, mTX, mRX, mFriends, mRS232Live,presenceRef,lastOnlineRef,connectedRef,connectedRefF;
     public MySocketServer mServer;
     private static final int SERVER_PORT = 9402;
     Map<String, Object> alert = new HashMap<>();
+    Map<String, String> RXCheck = new HashMap<>();
     ArrayList<String> friends = new ArrayList<>();
 
     //*******PLC****************
@@ -247,9 +248,6 @@ public class MainActivity extends Activity {
 
     private void deviceRespond(String data){
         Map<String, Object> RX = new HashMap<>();
-        Map<String, String> RXCheck = new HashMap<>();
-        RXCheck.clear();
-
         if(oneTimeCMDCheck){
             oneTimeCMDCheck=false;
             RX.clear();
@@ -262,17 +260,17 @@ public class MainActivity extends Activity {
             RX.put("message", data);
             RX.put("timeStamp", ServerValue.TIMESTAMP);
             mRX.push().setValue(RX);
-        }else {
-            if (CMD!=null && RXCheck.get(CMD)!=null){
-                if (!data.matches(RXCheck.get(CMD))){
+        }else if (RXCheck.get(CMD)!=null) {
+                if (!data.equals(RXCheck.get(CMD))) {
                     alert(CMD + ":" + data);
                     RX.clear();
                     RX.put("message", CMD + ":" + data);
                     RX.put("timeStamp", ServerValue.TIMESTAMP);
                     mRX.push().setValue(RX);
                     RXCheck.put(CMD, data);
-              }
-            }
+                } else if (data.equals(RXCheck.get(CMD))) {
+                    Log.i(TAG, "Serial data no change");
+                }
         }
     }
 
@@ -282,10 +280,12 @@ public class MainActivity extends Activity {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
                 PCMD.clear();
+                RXCheck.clear();
                 for (DataSnapshot childSnapshot : snapshot.getChildren()) {
                     if (childSnapshot.getValue() != null) {
                         String cmd = childSnapshot.getValue().toString();
                         PCMD.add(cmd);
+                        RXCheck.put(cmd,"");
                         serialDevice.write((ENQ + cmd + newLine).getBytes());
                         Log.i(TAG, "Serial data send: " + CMD);
                     }
