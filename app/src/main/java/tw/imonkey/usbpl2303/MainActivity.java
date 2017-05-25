@@ -94,7 +94,7 @@ public class MainActivity extends Activity {
                 String dataUtf8 = new String(data, "UTF-8");
                 buffer += dataUtf8;
                 int index;
-                while ((index = buffer.indexOf(ETX)) != -1) {  //string.indexOf('\n')=-1 =>'\n' not exists
+                while ((index = buffer.indexOf(newLine)) != -1) {  //string.indexOf('\n')=-1 =>'\n' not exists
                     final String dataStr = buffer.substring(0, index + 1).trim();
                     buffer = buffer.length() == index ? "" : buffer.substring(index + 1);
                     runOnUiThread(new Runnable() {
