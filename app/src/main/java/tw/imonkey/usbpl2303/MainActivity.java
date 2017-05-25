@@ -61,7 +61,7 @@ public class MainActivity extends Activity {
     int flowControl= UsbSerialInterface.FLOW_CONTROL_OFF;
     String buffer = "";
 //*******firebase*************
-    String memberEmail,deviceId;
+    String memberEmail,deviceId,CMD;
     public static final String devicePrefs = "devicePrefs";
     DatabaseReference  mRequest, mTX, mRX, mFriends, mRS232Live,presenceRef,lastOnlineRef,connectedRef,connectedRefF;
     public MySocketServer mServer;
@@ -247,37 +247,33 @@ public class MainActivity extends Activity {
 
     private void deviceRespond(String data){
         Map<String, Object> RX = new HashMap<>();
+        Map<String, String> RXCheck = new HashMap<>();
+        RXCheck.clear();
+
         if(oneTimeCMDCheck){
             oneTimeCMDCheck=false;
             RX.clear();
-       //     RX.put("message", data.replaceAll("00FF",""));
             RX.put("message", data);
             RX.put("timeStamp", ServerValue.TIMESTAMP);
             mRX.push().setValue(RX);
-        }
-//test Alert
-        if (data.contains("Android")) {
-            alert(data); // alert client.
+        }else if (data.contains("Android")) {
+            alert(data); // alert test.
             RX.clear();
             RX.put("message", data);
             RX.put("timeStamp", ServerValue.TIMESTAMP);
             mRX.push().setValue(RX);
-
-
-        }
-/*
-        if (data.contains("00FF")) {
-            String registerData =data.replaceAll("00FF","");
-            if (Integer.parseInt(registerData)!=0) {
-                alert(registerData); // alert client.
-
-                RX.clear();
-                RX.put("message", registerData);
-                RX.put("timeStamp", ServerValue.TIMESTAMP);
-                mRX.push().setValue(RX);
+        }else {
+            if (CMD!=null && RXCheck.get(CMD)!=null){
+                if (!data.matches(RXCheck.get(CMD))){
+                    alert(CMD + ":" + data);
+                    RX.clear();
+                    RX.put("message", CMD + ":" + data);
+                    RX.put("timeStamp", ServerValue.TIMESTAMP);
+                    mRX.push().setValue(RX);
+                    RXCheck.put(CMD, data);
+              }
             }
         }
-        */
     }
 
     private void requestDevice(){
@@ -288,12 +284,11 @@ public class MainActivity extends Activity {
                 PCMD.clear();
                 for (DataSnapshot childSnapshot : snapshot.getChildren()) {
                     if (childSnapshot.getValue() != null) {
-                        String CMD = childSnapshot.getValue().toString();
-                        PCMD.add(CMD);
-                        serialDevice.write((ENQ + CMD + newLine).getBytes());
+                        String cmd = childSnapshot.getValue().toString();
+                        PCMD.add(cmd);
+                        serialDevice.write((ENQ + cmd + newLine).getBytes());
                         Log.i(TAG, "Serial data send: " + CMD);
                     }
- //                   reqTimer();
                 }
             }
             @Override
@@ -310,7 +305,8 @@ public class MainActivity extends Activity {
             @Override
             public void run() {
                 if(PCMD.size()>0) {
-                    serialDevice.write((ENQ + PCMD.get(countPCMD) + newLine).getBytes()); // Async-like operation now! :)
+                    CMD= PCMD.get(countPCMD);
+                    serialDevice.write((ENQ + CMD + newLine).getBytes()); // Async-like operation now! :)
                     Log.i(TAG, "Serial data send:"+PCMD.get(countPCMD));
                     if (countPCMD < (PCMD.size() - 1)) {
                         countPCMD++;
