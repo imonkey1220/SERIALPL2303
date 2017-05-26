@@ -286,7 +286,7 @@ public class MainActivity extends Activity {
                 RXCheck.clear();
                 for (DataSnapshot childSnapshot : snapshot.getChildren()) {
                     if (childSnapshot.getValue() != null) {
-                        String cmd = childSnapshot.getValue().toString();
+                        String cmd = childSnapshot.getValue().toString().trim();
                         PCMD.add(cmd);
                         RXCheck.put(cmd,"");
                         serialDevice.write((ENQ + cmd + newLine).getBytes());
