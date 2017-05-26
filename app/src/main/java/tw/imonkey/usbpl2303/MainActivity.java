@@ -129,9 +129,9 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         TimeZone.setDefault(TimeZone.getTimeZone("Asia/Taipei"));
-        //      SharedPreferences.Editor editor = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE).edit();
-        //      editor.clear();
-        //      editor.commit();
+   //     SharedPreferences.Editor editor = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE).edit();
+    //    editor.clear();
+     //   editor.commit();
         SharedPreferences settings = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE);
         memberEmail = settings.getString("memberEmail",null);
         deviceId = settings.getString("deviceId",null);
@@ -139,7 +139,7 @@ public class MainActivity extends Activity {
             memberEmail="test@po-po.com";
             deviceId="PLC_RS232_test";
             startServer();
-            reqDeviceTimerTest();
+  //          reqDeviceTimerTest();
         }
         usbManager = getSystemService(UsbManager.class);
             // Detach events are sent as a system-wide broadcast
