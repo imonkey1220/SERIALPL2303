@@ -252,6 +252,7 @@ public class MainActivity extends Activity {
     private void deviceRespond(String data){
         Map<String, Object> RX = new HashMap<>();
         if(oneTimeCMDCheck){
+            alert(data);
             oneTimeCMDCheck=false;
             RX.clear();
             RX.put("message", data);
