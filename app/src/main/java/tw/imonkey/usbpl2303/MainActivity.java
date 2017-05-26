@@ -139,7 +139,7 @@ public class MainActivity extends Activity {
             memberEmail="test@po-po.com";
             deviceId="PLC_RS232_test";
             startServer();
-    //        reqDeviceTimerTest();
+            reqDeviceTimerTest();
         }
         usbManager = getSystemService(UsbManager.class);
             // Detach events are sent as a system-wide broadcast
@@ -148,11 +148,11 @@ public class MainActivity extends Activity {
 
         mRX = FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/RX/");
         mTX = FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/TX/");
-
         deviceOnline();
         listenUartTX();
         requestDevice();
         reqTimer();
+        alert("PLC監控機重新啟動!");
     }
 
     @Override
@@ -418,6 +418,7 @@ public class MainActivity extends Activity {
       //      Intent i;
       //      i = new Intent(this,MainActivity.class);
       //      startActivity(i);
+            alert("PLC監控機設定完成!");
         }
     }
 
