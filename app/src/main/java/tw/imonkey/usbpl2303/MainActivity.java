@@ -129,6 +129,9 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         TimeZone.setDefault(TimeZone.getTimeZone("Asia/Taipei"));
+        //      SharedPreferences.Editor editor = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE).edit();
+        //      editor.clear();
+        //      editor.commit();
         SharedPreferences settings = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE);
         memberEmail = settings.getString("memberEmail",null);
         deviceId = settings.getString("deviceId",null);
@@ -347,15 +350,15 @@ public class MainActivity extends Activity {
 
     private void alert(String message){
 
-        NotifyUser.topicsPUSH(deviceId, memberEmail, "智慧機通知", message);
+   //     NotifyUser.topicsPUSH(deviceId, memberEmail, "智慧機通知", message);
         NotifyUser.IIDPUSH(deviceId, memberEmail, "智慧機通知", message);
-        NotifyUser.emailPUSH(deviceId, memberEmail, message);
-        NotifyUser.SMSPUSH(deviceId, memberEmail, message);
+    //    NotifyUser.emailPUSH(deviceId, memberEmail, message);
+    //    NotifyUser.SMSPUSH(deviceId, memberEmail, message);
         for (String email : friends ) {
-            NotifyUser.topicsPUSH(deviceId, email, "智慧機通知", message);
+    //        NotifyUser.topicsPUSH(deviceId, email, "智慧機通知", message);
             NotifyUser.IIDPUSH(deviceId, email, "智慧機通知", message);
-            NotifyUser.emailPUSH(deviceId, email, message);
-            NotifyUser.SMSPUSH(deviceId, email, message);
+    //        NotifyUser.emailPUSH(deviceId, email, message);
+     //       NotifyUser.SMSPUSH(deviceId, email, message);
         }
 
         DatabaseReference mAlertMaster= FirebaseDatabase.getInstance().getReference("/FUI/"+memberEmail.replace(".", "_")+"/"+deviceId+"/alert");
@@ -411,10 +414,10 @@ public class MainActivity extends Activity {
             editor.putString("memberEmail",memberEmail);
             editor.putString("deviceId",deviceId);
             editor.apply();
-            mServer.sendMessage("echo: " + message);
-            Intent i;
-            i = new Intent(this,MainActivity.class);
-            startActivity(i);
+      //      mServer.sendMessage("echo: " + message);
+      //      Intent i;
+      //      i = new Intent(this,MainActivity.class);
+      //      startActivity(i);
         }
     }
 
