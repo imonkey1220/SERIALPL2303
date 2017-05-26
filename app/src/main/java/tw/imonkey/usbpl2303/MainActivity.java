@@ -232,7 +232,7 @@ public class MainActivity extends Activity {
             @Override
             public void onChildAdded(DataSnapshot dataSnapshot, String s) {
                 if (dataSnapshot.child("message").getValue()!= null) {
-                    String oneTimeCMD=dataSnapshot.child("message").getValue().toString();
+                    String oneTimeCMD=dataSnapshot.child("message").getValue().toString().trim();
                     serialDevice.write((ENQ+oneTimeCMD+ETX).getBytes());
                     oneTimeCMDCheck=true;
                     Log.i(TAG, "Serial data send: " + oneTimeCMD);
@@ -282,6 +282,10 @@ public class MainActivity extends Activity {
         mRequest.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
+                if (handler!=null) {
+                    handler.removeCallbacks(runnable);
+                    handler=null;
+                }
                 PCMD.clear();
                 RXCheck.clear();
                 for (DataSnapshot childSnapshot : snapshot.getChildren()) {
@@ -293,6 +297,7 @@ public class MainActivity extends Activity {
                         Log.i(TAG, "Serial data send: " + CMD);
                     }
                 }
+                reqTimer();
             }
             @Override
             public void onCancelled(DatabaseError databaseError) {}
@@ -300,9 +305,6 @@ public class MainActivity extends Activity {
     }
 
     private void reqTimer() {
-        if (handler != null) {
-            handler = null;
-        }
         handler = new Handler();
         runnable = new Runnable() {
             @Override
