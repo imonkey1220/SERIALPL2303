@@ -63,12 +63,13 @@ public class MainActivity extends Activity {
 //*******firebase*************
     String memberEmail,deviceId;
     public static final String devicePrefs = "devicePrefs";
-    DatabaseReference  mRequest, mTX, mRX, mFriends, mRS232Live,presenceRef,lastOnlineRef,connectedRef,connectedRefF;
+    DatabaseReference  mRequest,mLog, mTX, mRX, mFriends, mRS232Live,presenceRef,lastOnlineRef,connectedRef,connectedRefF;
     public MySocketServer mServer;
     private static final int SERVER_PORT = 9402;
     Map<String, Object> alert = new HashMap<>();
     Map<String, String> RXCheck = new HashMap<>();
     ArrayList<String> friends = new ArrayList<>();
+    boolean restart=true;
 
     //*******PLC****************
     //set serialport protocol parameters
@@ -77,9 +78,9 @@ public class MainActivity extends Activity {
     String ENQ=new String(new char[]{0x05});
     String newLine=new String(new char[]{0x0D,0x0A});
     //test: read D,M redister
-    String Msg_Word_Rd_Cmd =  "00FFWRAD000010";
-    String Msg_Bit_Rd_Cmd  =  "00FFBRAM000010";
-    public int ReadType = 0; //0:read D Register  1:read M Register
+    String wordReadCMD=  "00FFWRAD000010";
+    String bitReadCMD =  "00FFBRAM000010";
+    public int readType = 0; //0:read D Register  1:read M Register
 
     private Handler handler,handlerTest;
     Runnable runnable,runnableTest;
@@ -87,7 +88,7 @@ public class MainActivity extends Activity {
     int timer=1000 ;
     boolean oneTimeCMDCheck=false;
     ArrayList<String> PCMD = new ArrayList<>();
-
+    String oneTimeCMD;
     private UsbSerialInterface.UsbReadCallback callback = new UsbSerialInterface.UsbReadCallback() {
         @Override
         public void onReceivedData(byte[] data) {
@@ -148,6 +149,7 @@ public class MainActivity extends Activity {
 
         mRX = FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/RX/");
         mTX = FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/TX/");
+        mLog=FirebaseDatabase.getInstance().getReference("/LOG/RS232/" + deviceId+"/LOG/");
         deviceOnline();
         listenUartTX();
         requestDevice();
@@ -168,6 +170,14 @@ public class MainActivity extends Activity {
         unregisterReceiver(usbDetachedReceiver);
         stopUsbConnection();
         EventBus.getDefault().unregister(this);
+        if (handler!=null) {
+            handler.removeCallbacks(runnable);
+            handler=null;
+        }
+        if (handlerTest!=null) {
+            handlerTest.removeCallbacks(runnableTest);
+            handlerTest=null;
+        }
 
     }
 
@@ -231,11 +241,13 @@ public class MainActivity extends Activity {
         mTX.limitToLast(1).addChildEventListener(new ChildEventListener() {
             @Override
             public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-                if (dataSnapshot.child("message").getValue()!= null) {
-                    String oneTimeCMD=dataSnapshot.child("message").getValue().toString().trim();
-                    serialDevice.write((ENQ+oneTimeCMD+ETX).getBytes());
+                if (dataSnapshot.child("message").getValue()!= null && !restart) {
+                    oneTimeCMD=dataSnapshot.child("message").getValue().toString().trim();
+                    serialDevice.write((ENQ+oneTimeCMD+newLine).getBytes());
                     oneTimeCMDCheck=true;
                     Log.i(TAG, "Serial data send: " + oneTimeCMD);
+                }else{
+                    restart=false;
                 }
             }
             @Override
@@ -255,15 +267,17 @@ public class MainActivity extends Activity {
             alert(data);
             oneTimeCMDCheck=false;
             RX.clear();
-            RX.put("message", data);
+            RX.put("message", oneTimeCMD + ":" + data);
             RX.put("timeStamp", ServerValue.TIMESTAMP);
             mRX.push().setValue(RX);
+            mLog.push().setValue(RX);
         }else if (data.contains("Android")) {
             alert(data); // alert test.
             RX.clear();
             RX.put("message", data);
             RX.put("timeStamp", ServerValue.TIMESTAMP);
             mRX.push().setValue(RX);
+            mLog.push().setValue(RX);
         }else if (RXCheck.get(CMD)!=null) {
                 if (!data.equals(RXCheck.get(CMD))) {
                     alert(CMD + ":" + data);
@@ -271,6 +285,7 @@ public class MainActivity extends Activity {
                     RX.put("message", CMD + ":" + data);
                     RX.put("timeStamp", ServerValue.TIMESTAMP);
                     mRX.push().setValue(RX);
+                    mLog.push().setValue(RX);
                     RXCheck.put(CMD, data);
                 } else if (data.equals(RXCheck.get(CMD))) {
                     Log.i(TAG, "Serial data no change");
@@ -290,8 +305,8 @@ public class MainActivity extends Activity {
                 PCMD.clear();
                 RXCheck.clear();
                 for (DataSnapshot childSnapshot : snapshot.getChildren()) {
-                    if (childSnapshot.getValue() != null) {
-                        String cmd = childSnapshot.getValue().toString().trim();
+                    if (childSnapshot.child("message").getValue() != null) {
+                        String cmd = childSnapshot.child("message").getValue().toString().trim();
                         PCMD.add(cmd);
                         RXCheck.put(cmd,"");
                         serialDevice.write((ENQ + cmd + newLine).getBytes());
@@ -306,6 +321,7 @@ public class MainActivity extends Activity {
     }
 
     private void reqTimer() {
+        countPCMD = 0;
         handler = new Handler();
         runnable = new Runnable() {
             @Override
@@ -333,18 +349,18 @@ public class MainActivity extends Activity {
             @Override
             public void run()
             {
-                String Send_Out;
-                if(ReadType == 0) {
-                    Send_Out =ENQ + Msg_Word_Rd_Cmd + newLine;
-                    Log.i(TAG, " D Reg: " + Send_Out);
-                    ReadType = 1;
+                String sendOut;
+                if(readType == 0) {
+                    sendOut =ENQ + wordReadCMD + newLine;
+                    Log.i(TAG, " D Reg: " + sendOut);
+                    readType = 1;
                 }
                 else {
-                    Send_Out = ENQ+ Msg_Bit_Rd_Cmd + newLine;
-                    Log.i(TAG, " M Reg: " + Send_Out);
-                    ReadType = 0;
+                    sendOut = ENQ+ bitReadCMD + newLine;
+                    Log.i(TAG, " M Reg: " + sendOut);
+                    readType = 0;
                 }
-                serialDevice.write(Send_Out.getBytes());
+                serialDevice.write(sendOut.getBytes());
                 handlerTest.postDelayed(this, timer);
             }
         };
@@ -354,12 +370,12 @@ public class MainActivity extends Activity {
     private void alert(String message){
 
    //     NotifyUser.topicsPUSH(deviceId, memberEmail, "智慧機通知", message);
-        NotifyUser.IIDPUSH(deviceId, memberEmail, "智慧機通知", message);
+    //    NotifyUser.IIDPUSH(deviceId, memberEmail, "智慧機通知", message);
     //    NotifyUser.emailPUSH(deviceId, memberEmail, message);
     //    NotifyUser.SMSPUSH(deviceId, memberEmail, message);
         for (String email : friends ) {
     //        NotifyUser.topicsPUSH(deviceId, email, "智慧機通知", message);
-            NotifyUser.IIDPUSH(deviceId, email, "智慧機通知", message);
+     //       NotifyUser.IIDPUSH(deviceId, email, "智慧機通知", message);
     //        NotifyUser.emailPUSH(deviceId, email, message);
      //       NotifyUser.SMSPUSH(deviceId, email, message);
         }
