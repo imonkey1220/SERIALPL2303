@@ -63,7 +63,8 @@ public class MainActivity extends Activity {
 //*******firebase*************
     String memberEmail,deviceId;
     public static final String devicePrefs = "devicePrefs";
-    DatabaseReference  mRequest,mLog, mTX, mRX, mFriends, mRS232Live,presenceRef,lastOnlineRef,connectedRef,connectedRefF;
+    DatabaseReference  mRequest,mLog, mTX, mRX, mFriends, mRS232Live, presenceRef, lastOnlineRef, connectedRef, connectedRefF;
+    int logCount,RXCount,TXCount;
     public MySocketServer mServer;
     private static final int SERVER_PORT = 9402;
     Map<String, Object> alert = new HashMap<>();
@@ -136,11 +137,14 @@ public class MainActivity extends Activity {
         SharedPreferences settings = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE);
         memberEmail = settings.getString("memberEmail",null);
         deviceId = settings.getString("deviceId",null);
+        logCount = settings.getInt("logCount",0);
+        TXCount = settings.getInt("TXCount",0);
+        RXCount = settings.getInt("RXCount",0);
         if (memberEmail==null) {
             memberEmail="test@po-po.com";
             deviceId="PLC_RS232_test";
             startServer();
-  //          reqDeviceTimerTest();
+            reqDeviceTimerTest();
         }
         usbManager = getSystemService(UsbManager.class);
             // Detach events are sent as a system-wide broadcast
@@ -247,7 +251,7 @@ public class MainActivity extends Activity {
                     oneTimeCMDCheck=true;
                     Log.i(TAG, "Serial data send: " + oneTimeCMD);
                 }else{
-                    restart=false;
+                    restart=false;//
                 }
             }
             @Override
@@ -271,6 +275,12 @@ public class MainActivity extends Activity {
             RX.put("timeStamp", ServerValue.TIMESTAMP);
             mRX.push().setValue(RX);
             mLog.push().setValue(RX);
+            RXCount++;
+            logCount++;
+            SharedPreferences.Editor editor = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE).edit();
+            editor.putInt("RXCount",RXCount);
+            editor.putInt("logCount",logCount);
+            editor.apply();
         }else if (data.contains("Android")) {
             alert(data); // alert test.
             RX.clear();
@@ -278,6 +288,13 @@ public class MainActivity extends Activity {
             RX.put("timeStamp", ServerValue.TIMESTAMP);
             mRX.push().setValue(RX);
             mLog.push().setValue(RX);
+            RXCount++;
+            logCount++;
+            SharedPreferences.Editor editor = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE).edit();
+            editor.putInt("RXCount",RXCount);
+            editor.putInt("logCount",logCount);
+            editor.apply();
+
         }else if (RXCheck.get(CMD)!=null) {
                 if (!data.equals(RXCheck.get(CMD))) {
                     alert(CMD + ":" + data);
@@ -287,12 +304,43 @@ public class MainActivity extends Activity {
                     mRX.push().setValue(RX);
                     mLog.push().setValue(RX);
                     RXCheck.put(CMD, data);
+                    RXCount++;
+                    logCount++;
+                    SharedPreferences.Editor editor = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE).edit();
+                    editor.putInt("RXCount",RXCount);
+                    editor.putInt("logCount",logCount);
+                    editor.apply();
                 } else if (data.equals(RXCheck.get(CMD))) {
                     Log.i(TAG, "Serial data no change");
                 }
+
+            if (RXCount>1500) {
+                dataLimit(mRX);
+                RXCount= RXCount-500;
+            }
+            if (logCount>1500) {
+                dataLimit(mLog);
+                logCount= logCount-500;
+
+            }
         }
     }
 
+    private void dataLimit(final DatabaseReference mData) {
+        mData.orderByKey().limitToLast(500)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot snapshot) {
+                        for (DataSnapshot childSnapshot : snapshot.getChildren()) {
+                            mData.child(childSnapshot.getKey()).removeValue();
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+                    }
+                });
+    }
     private void requestDevice(){
         mRequest= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/SETTINGS/CMD/");
         mRequest.addValueEventListener(new ValueEventListener() {
