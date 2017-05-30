@@ -143,6 +143,17 @@ public class MainActivity extends Activity {
         if (memberEmail==null) {
             memberEmail="test@po-po.com";
             deviceId="PLC_RS232_test";
+            DatabaseReference mAddMaster= FirebaseDatabase.getInstance().getReference("/FUI/" +memberEmail.replace(".", "_"));
+            deviceId =mAddMaster.push().getKey();
+            Map<String, Object> addMaster = new HashMap<>();
+            addMaster.put("companyId","po-po") ;
+            addMaster.put("device","usbpl2303");
+            addMaster.put("deviceType","PLC監控機"); //PLC監控機;GPIO智慧機
+            addMaster.put("description","Android things rs232 test");
+            addMaster.put("masterEmail",memberEmail) ;
+            addMaster.put("timeStamp", ServerValue.TIMESTAMP);
+            addMaster.put("topics_id",deviceId);
+            mAddMaster.child(deviceId).setValue(addMaster);
             startServer();
             reqDeviceTimerTest();
         }
