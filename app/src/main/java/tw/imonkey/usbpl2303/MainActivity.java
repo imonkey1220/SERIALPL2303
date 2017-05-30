@@ -281,22 +281,8 @@ public class MainActivity extends Activity {
             editor.putInt("RXCount",RXCount);
             editor.putInt("logCount",logCount);
             editor.apply();
-        }else if (data.contains("Android")) {
-            alert(data); // alert test.
-            RX.clear();
-            RX.put("message", data);
-            RX.put("timeStamp", ServerValue.TIMESTAMP);
-            mRX.push().setValue(RX);
-            mLog.push().setValue(RX);
-            RXCount++;
-            logCount++;
-            SharedPreferences.Editor editor = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE).edit();
-            editor.putInt("RXCount",RXCount);
-            editor.putInt("logCount",logCount);
-            editor.apply();
-
         }else if (RXCheck.get(CMD)!=null) {
-                if (!data.equals(RXCheck.get(CMD))) {
+                  if (!data.equals(RXCheck.get(CMD))) {
                     alert(CMD + ":" + data);
                     RX.clear();
                     RX.put("message", CMD + ":" + data);
@@ -307,13 +293,11 @@ public class MainActivity extends Activity {
                     RXCount++;
                     logCount++;
                     SharedPreferences.Editor editor = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE).edit();
-                    editor.putInt("RXCount",RXCount);
-                    editor.putInt("logCount",logCount);
+                    editor.putInt("RXCount", RXCount);
+                    editor.putInt("logCount", logCount);
                     editor.apply();
-                } else if (data.equals(RXCheck.get(CMD))) {
-                    Log.i(TAG, "Serial data no change");
-                }
-
+                  }
+        }
             if (RXCount>1500) {
                 dataLimit(mRX);
                 RXCount= RXCount-500;
@@ -323,7 +307,6 @@ public class MainActivity extends Activity {
                 logCount= logCount-500;
 
             }
-        }
     }
 
     private void dataLimit(final DatabaseReference mData) {
@@ -391,6 +374,9 @@ public class MainActivity extends Activity {
         }
 
     private void reqDeviceTimerTest(){
+        RXCheck.clear();
+        RXCheck.put(wordReadCMD,"");
+        RXCheck.put(bitReadCMD,"");
         handlerTest = new Handler();
         runnableTest = new Runnable()
         {
@@ -399,12 +385,14 @@ public class MainActivity extends Activity {
             {
                 String sendOut;
                 if(readType == 0) {
-                    sendOut =ENQ + wordReadCMD + newLine;
+                    CMD=wordReadCMD;
+                    sendOut =ENQ + CMD + newLine;
                     Log.i(TAG, " D Reg: " + sendOut);
                     readType = 1;
                 }
                 else {
-                    sendOut = ENQ+ bitReadCMD + newLine;
+                    CMD=bitReadCMD;
+                    sendOut = ENQ+ CMD + newLine;
                     Log.i(TAG, " M Reg: " + sendOut);
                     readType = 0;
                 }
