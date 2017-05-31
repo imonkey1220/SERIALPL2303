@@ -78,13 +78,9 @@ public class MainActivity extends Activity {
     String ETX=new String(new char[]{0x03});
     String ENQ=new String(new char[]{0x05});
     String newLine=new String(new char[]{0x0D,0x0A});
-    //test: read D,M redister
-    String wordReadCMD=  "00FFWRAD000010";
-    String bitReadCMD =  "00FFBRAM000010";
-    public int readType = 0; //0:read D Register  1:read M Register
 
-    private Handler handler,handlerTest;
-    Runnable runnable,runnableTest;
+    private Handler handler;
+    Runnable runnable;
     int countPCMD=0;
     int timer=1000 ;
     boolean oneTimeCMDCheck=false;
@@ -154,7 +150,6 @@ public class MainActivity extends Activity {
             addTest.put("topics_id",deviceId);
             mAddTest.child(deviceId).setValue(addTest);
             startServer();
-            reqDeviceTimerTest();
         }
         usbManager = getSystemService(UsbManager.class);
             // Detach events are sent as a system-wide broadcast
@@ -167,7 +162,6 @@ public class MainActivity extends Activity {
         deviceOnline();
         listenUartTX();
         requestDevice();
-        reqTimer();
         alert("PLC監控機重新啟動!");
     }
 
@@ -188,11 +182,6 @@ public class MainActivity extends Activity {
             handler.removeCallbacks(runnable);
             handler=null;
         }
-        if (handlerTest!=null) {
-            handlerTest.removeCallbacks(runnableTest);
-            handlerTest=null;
-        }
-
     }
 
     private void startUsbConnection() {
@@ -306,6 +295,8 @@ public class MainActivity extends Activity {
                     editor.putInt("RXCount", RXCount);
                     editor.putInt("logCount", logCount);
                     editor.apply();
+                  } else{
+                      Log.i(TAG, "Serial data is no change." );
                   }
         }
             if (RXCount>1500) {
@@ -315,25 +306,9 @@ public class MainActivity extends Activity {
             if (logCount>1500) {
                 dataLimit(mLog);
                 logCount= logCount-500;
-
             }
     }
 
-    private void dataLimit(final DatabaseReference mData) {
-        mData.orderByKey().limitToLast(500)
-                .addListenerForSingleValueEvent(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(DataSnapshot snapshot) {
-                        for (DataSnapshot childSnapshot : snapshot.getChildren()) {
-                            mData.child(childSnapshot.getKey()).removeValue();
-                        }
-                    }
-
-                    @Override
-                    public void onCancelled(DatabaseError databaseError) {
-                    }
-                });
-    }
     private void requestDevice(){
         mRequest= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/SETTINGS/CMD/");
         mRequest.addValueEventListener(new ValueEventListener() {
@@ -382,48 +357,17 @@ public class MainActivity extends Activity {
           };
             handler.postDelayed(runnable,timer);
         }
-
-    private void reqDeviceTimerTest(){
-        RXCheck.clear();
-        RXCheck.put(wordReadCMD,"");
-        RXCheck.put(bitReadCMD,"");
-        handlerTest = new Handler();
-        runnableTest = new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                String sendOut;
-                if(readType == 0) {
-                    CMD=wordReadCMD;
-                    sendOut =ENQ + CMD + newLine;
-                    Log.i(TAG, " D Reg: " + sendOut);
-                    readType = 1;
-                }
-                else {
-                    CMD=bitReadCMD;
-                    sendOut = ENQ+ CMD + newLine;
-                    Log.i(TAG, " M Reg: " + sendOut);
-                    readType = 0;
-                }
-                serialDevice.write(sendOut.getBytes());
-                handlerTest.postDelayed(this, timer);
-            }
-        };
-        handlerTest.postDelayed(runnableTest, timer);
-    }
-
     private void alert(String message){
 
-   //     NotifyUser.topicsPUSH(deviceId, memberEmail, "智慧機通知", message);
-    //    NotifyUser.IIDPUSH(deviceId, memberEmail, "智慧機通知", message);
-    //    NotifyUser.emailPUSH(deviceId, memberEmail, message);
-    //    NotifyUser.SMSPUSH(deviceId, memberEmail, message);
+            NotifyUser.topicsPUSH(deviceId, memberEmail, "智慧機通知", message);
+    //      NotifyUser.IIDPUSH(deviceId, memberEmail, "智慧機通知", message);
+    //      NotifyUser.emailPUSH(deviceId, memberEmail, message);
+    //      NotifyUser.SMSPUSH(deviceId, memberEmail, message);
         for (String email : friends ) {
-    //        NotifyUser.topicsPUSH(deviceId, email, "智慧機通知", message);
-     //       NotifyUser.IIDPUSH(deviceId, email, "智慧機通知", message);
-    //        NotifyUser.emailPUSH(deviceId, email, message);
-     //       NotifyUser.SMSPUSH(deviceId, email, message);
+            NotifyUser.topicsPUSH(deviceId, email, "智慧機通知", message);
+     //     NotifyUser.IIDPUSH(deviceId, email, "智慧機通知", message);
+    //      NotifyUser.emailPUSH(deviceId, email, message);
+     //     NotifyUser.SMSPUSH(deviceId, email, message);
         }
 
         DatabaseReference mAlertMaster= FirebaseDatabase.getInstance().getReference("/FUI/"+memberEmail.replace(".", "_")+"/"+deviceId+"/alert");
@@ -544,6 +488,22 @@ public class MainActivity extends Activity {
             @Override
             public void onCancelled(DatabaseError databaseError) {}
         });
+    }
+
+    private void dataLimit(final DatabaseReference mData) {
+        mData.orderByKey().limitToLast(500)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot snapshot) {
+                        for (DataSnapshot childSnapshot : snapshot.getChildren()) {
+                            mData.child(childSnapshot.getKey()).removeValue();
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+                    }
+                });
     }
 }
 
