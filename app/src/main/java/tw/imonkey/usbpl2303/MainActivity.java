@@ -66,6 +66,7 @@ public class MainActivity extends Activity {
     DatabaseReference  mRequest,mLog, mTX, mRX, mFriends, mRS232Live, presenceRef, lastOnlineRef, connectedRef, connectedRefF;
     int logCount,RXCount,TXCount;
     int dataCount;
+    int limit=1000;//max Logs (even number)
     public MySocketServer mServer;
     private static final int SERVER_PORT = 9402;
     Map<String, Object> alert = new HashMap<>();
@@ -300,14 +301,15 @@ public class MainActivity extends Activity {
                       Log.i(TAG, "Serial data is no change." );
                   }
         }
-            if (RXCount>1500) {
-                dataLimit(mRX);
-                RXCount= RXCount-500;
+            if (RXCount>(limit+(limit)/2)) {
+                dataLimit(mRX,limit);
+                RXCount= RXCount-(limit)/2;
             }
-            if (logCount>1500) {
-                dataLimit(mLog);
-                logCount= logCount-500;
-            }
+        if (RXCount>(limit+(limit)/2)) {
+            dataLimit(mLog,limit);
+            logCount= logCount-(limit)/2;
+        }
+
     }
 
     private void requestDevice(){
@@ -491,7 +493,7 @@ public class MainActivity extends Activity {
         });
     }
 
-    private void dataLimit(final DatabaseReference mData) {
+    private void dataLimit(final DatabaseReference mData,int limit) {
         mData.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
@@ -501,19 +503,21 @@ public class MainActivity extends Activity {
             public void onCancelled(DatabaseError databaseError) {
             }
         });
-        mData.orderByKey().limitToFirst(dataCount-1000)
-                .addListenerForSingleValueEvent(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(DataSnapshot snapshot) {
-                        for (DataSnapshot childSnapshot : snapshot.getChildren()) {
-                            mData.child(childSnapshot.getKey()).removeValue();
+        if((dataCount-limit)>0) {
+            mData.orderByKey().limitToFirst(dataCount - limit)
+                    .addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(DataSnapshot snapshot) {
+                            for (DataSnapshot childSnapshot : snapshot.getChildren()) {
+                                mData.child(childSnapshot.getKey()).removeValue();
+                            }
                         }
-                    }
 
-                    @Override
-                    public void onCancelled(DatabaseError databaseError) {
-                    }
-                });
+                        @Override
+                        public void onCancelled(DatabaseError databaseError) {
+                        }
+                    });
+        }
     }
 }
 
