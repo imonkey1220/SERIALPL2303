@@ -65,6 +65,7 @@ public class MainActivity extends Activity {
     public static final String devicePrefs = "devicePrefs";
     DatabaseReference  mRequest,mLog, mTX, mRX, mFriends, mRS232Live, presenceRef, lastOnlineRef, connectedRef, connectedRefF;
     int logCount,RXCount,TXCount;
+    int dataCount;
     public MySocketServer mServer;
     private static final int SERVER_PORT = 9402;
     Map<String, Object> alert = new HashMap<>();
@@ -491,7 +492,16 @@ public class MainActivity extends Activity {
     }
 
     private void dataLimit(final DatabaseReference mData) {
-        mData.orderByKey().limitToLast(500)
+        mData.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                dataCount=(int)(snapshot.getChildrenCount());
+            }
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+            }
+        });
+        mData.orderByKey().limitToFirst(dataCount-1000)
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot snapshot) {
