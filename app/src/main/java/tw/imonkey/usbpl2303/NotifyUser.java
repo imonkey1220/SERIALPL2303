@@ -10,7 +10,7 @@ import com.google.firebase.database.ValueEventListener;
 import java.util.HashMap;
 import java.util.Map;
 class NotifyUser {
-
+  static int limit=1000;
     static void SMSPUSH( String deviceId ,String memberEmail,String message){
         DatabaseReference mSMS= FirebaseDatabase.getInstance().getReference("/LOG/SMS/");
         Map<String, Object> SMS = new HashMap<>();
@@ -20,7 +20,7 @@ class NotifyUser {
         SMS.put("memberEmail",memberEmail);
         SMS.put("timeStamp", ServerValue.TIMESTAMP);
         mSMS.push().setValue(SMS);
-        dataLimit(mSMS,1000);
+        dataLimit(mSMS,limit);
     }
 
     static void emailPUSH( String deviceId ,String memberEmail,String message ){
@@ -32,7 +32,7 @@ class NotifyUser {
         EMAIL.put("memberEmail",memberEmail);
         EMAIL.put("timeStamp", ServerValue.TIMESTAMP);
         mEMAIL.push().setValue(EMAIL);
-        dataLimit(mEMAIL,1000);
+        dataLimit(mEMAIL,limit);
 
     }
 
@@ -51,7 +51,7 @@ class NotifyUser {
         PUSH.put("memberEmail",memberEmail);
         PUSH.put("timeStamp", ServerValue.TIMESTAMP);
         mTopicsPUSH.push().setValue(PUSH);
-        dataLimit(mTopicsPUSH,1000);
+        dataLimit(mTopicsPUSH,limit);
     }
 
     static void IIDPUSH(String deviceId,String memberEmail,String message_title,String message_body){
@@ -69,7 +69,7 @@ class NotifyUser {
         PUSH.put("memberEmail",memberEmail);
         PUSH.put("timeStamp", ServerValue.TIMESTAMP);
         mIIDPUSH.push().setValue(PUSH);
-        dataLimit(mIIDPUSH,1000);
+        dataLimit(mIIDPUSH,limit);
     }
 
     private static void dataLimit(final DatabaseReference mData,final int limit) {
@@ -98,8 +98,7 @@ class NotifyUser {
             public void onCancelled(DatabaseError databaseError) {
             }
         });
-
-  }
+    }
 }
 
 
