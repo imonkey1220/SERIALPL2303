@@ -10,7 +10,7 @@ import com.google.firebase.database.ValueEventListener;
 import java.util.HashMap;
 import java.util.Map;
 class NotifyUser {
-  static int limit=1000;
+ private static int limit=1000;
     static void SMSPUSH( String deviceId ,String memberEmail,String message){
         DatabaseReference mSMS= FirebaseDatabase.getInstance().getReference("/LOG/SMS/");
         Map<String, Object> SMS = new HashMap<>();
