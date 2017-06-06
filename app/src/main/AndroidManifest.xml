@@ -11,6 +11,7 @@
             The USB_DEVICE_ATTACHED intent is always sent to an activity.
             UsbActivity is launched singleTop to avoid creating multiple activities for each event.
           -->
+        <uses-library android:name="com.google.android.things"/>
         <activity android:name=".MainActivity"
             android:launchMode="singleTop">
             <!-- Launch as default from Android Studio -->
