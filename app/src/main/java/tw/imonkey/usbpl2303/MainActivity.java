@@ -15,6 +15,9 @@ import android.util.Log;
 
 import com.felhr.usbserial.UsbSerialDevice;
 import com.felhr.usbserial.UsbSerialInterface;
+import com.google.android.things.pio.Gpio;
+import com.google.android.things.pio.GpioCallback;
+import com.google.android.things.pio.PeripheralManagerService;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -23,6 +26,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ServerValue;
 import com.google.firebase.database.ValueEventListener;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -73,6 +77,9 @@ public class MainActivity extends Activity {
     Map<String, String> RXCheck = new HashMap<>();
     ArrayList<String> friends = new ArrayList<>();
     boolean restart=true;
+
+    Gpio RESETGpio;
+    String RESET="BCM26";
 
     //*******PLC****************
     //set serialport protocol parameters
@@ -138,6 +145,7 @@ public class MainActivity extends Activity {
         logCount = settings.getInt("logCount",0);
         TXCount = settings.getInt("TXCount",0);
         RXCount = settings.getInt("RXCount",0);
+        PeripheralManagerService service = new PeripheralManagerService();
         if (memberEmail==null) {
             memberEmail="test@po-po.com";
             deviceId="PLC_RS232_test";
@@ -152,7 +160,30 @@ public class MainActivity extends Activity {
             addTest.put("topics_id",deviceId);
             mAddTest.child(deviceId).setValue(addTest);
             startServer();
+        }else{
+            try {
+                RESETGpio = service.openGpio(RESET);
+                RESETGpio.setDirection(Gpio.DIRECTION_IN);
+                RESETGpio.setEdgeTriggerType(Gpio.EDGE_BOTH);
+                RESETGpio.registerGpioCallback(new GpioCallback() {
+                    @Override
+                    public boolean onGpioEdge(Gpio gpio) {
+
+                        try {
+                            if (RESETGpio.getValue()){
+                                startServer();
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        return true;
+                    }
+                });
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
+
         usbManager = getSystemService(UsbManager.class);
             // Detach events are sent as a system-wide broadcast
         IntentFilter filter = new IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED);
@@ -165,6 +196,7 @@ public class MainActivity extends Activity {
         listenUartTX();
         requestDevice();
         alert("PLC監控機重新啟動!");
+
     }
 
     @Override
@@ -183,6 +215,16 @@ public class MainActivity extends Activity {
         if (handler!=null) {
             handler.removeCallbacks(runnable);
             handler=null;
+        }
+
+        if ( RESETGpio != null) {
+            try {
+                RESETGpio.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                RESETGpio = null;
+            }
         }
     }
 
