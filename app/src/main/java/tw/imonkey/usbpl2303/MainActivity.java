@@ -33,6 +33,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -439,10 +440,9 @@ public class MainActivity extends Activity {
                 register.put("timeStamp", ServerValue.TIMESTAMP);
                 mRegister.child("M"+(Integer.parseInt(Register.substring(1))+i)).updateChildren(register);
             }
-
             if (Register.contains("D")){
                     register.clear();
-                    register.put("message", value);
+                    register.put("message", ByteBuffer.wrap(value.getBytes()).getFloat());
                     register.put("timeStamp", ServerValue.TIMESTAMP);
                     mRegister.child(Register).updateChildren(register);
                 }
