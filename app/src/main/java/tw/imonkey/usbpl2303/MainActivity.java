@@ -74,6 +74,7 @@ public class MainActivity extends Activity {
     public MySocketServer mServer;
     private static final int SERVER_PORT = 9402;
     Map<String, Object> alert = new HashMap<>();
+    Map<String, Object> register = new HashMap<>();
     Map<String, String> RXCheck = new HashMap<>();
     ArrayList<String> friends = new ArrayList<>();
     boolean restart=true;
@@ -424,7 +425,29 @@ public class MainActivity extends Activity {
             DatabaseReference mAlertFriend= FirebaseDatabase.getInstance().getReference("/FUI/"+email.replace(".", "_")+"/"+deviceId+"/alert");
             mAlertFriend.setValue(alert);
         }
+
+        toFBRegister(message);
     }
+    private void toFBRegister(String message){
+        DatabaseReference mRegister= FirebaseDatabase.getInstance().getReference("/FUI/"+memberEmail.replace(".", "_")+"/"+deviceId+"/REGISTER");
+        String Register = message.split(":")[0].substring(7,11);
+        String value =message.split(":")[1];
+        if (Register.contains("M")) {
+            for (int i=0;i<value.length();i++) {
+                register.clear();
+                register.put("message", value.substring(i, i+1));
+                register.put("timeStamp", ServerValue.TIMESTAMP);
+                mRegister.child("M"+(Integer.parseInt(Register.substring(1))+i)).updateChildren(register);
+            }
+
+            if (Register.contains("D")){
+                    register.clear();
+                    register.put("message", value);
+                    register.put("timeStamp", ServerValue.TIMESTAMP);
+                    mRegister.child(Register).updateChildren(register);
+                }
+            }
+        }
 
     // websocket server
     private void startServer() {
