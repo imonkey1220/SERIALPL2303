@@ -24,8 +24,11 @@ dependencies {
     compile 'org.java-websocket:Java-WebSocket:1.3.0'
     compile 'de.greenrobot:eventbus:2.4.0'
     compile 'com.google.firebase:firebase-messaging:10.0.1'
+    compile 'com.android.support:appcompat-v7:25.3.1'
+    compile 'com.android.support.constraint:constraint-layout:1.0.1'
     provided 'com.google.android.things:androidthings:0.4-devpreview'
 }
+
 
 
 apply plugin: 'com.google.gms.google-services'
