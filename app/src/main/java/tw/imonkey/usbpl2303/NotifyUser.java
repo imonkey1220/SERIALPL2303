@@ -12,7 +12,7 @@ import java.util.Map;
 class NotifyUser {
  private static int limit=1000;
     static void SMSPUSH( String deviceId ,String memberEmail,String message){
-        DatabaseReference mSMS= FirebaseDatabase.getInstance().getReference("/LOG/SMS/");
+        DatabaseReference mSMS= FirebaseDatabase.getInstance().getReference("/SERVER/SMS/");
         Map<String, Object> SMS = new HashMap<>();
         SMS.clear();
         SMS.put("message",message);
@@ -24,7 +24,7 @@ class NotifyUser {
     }
 
     static void emailPUSH( String deviceId ,String memberEmail,String message ){
-        DatabaseReference mEMAIL= FirebaseDatabase.getInstance().getReference("/LOG/EMAIL/");
+        DatabaseReference mEMAIL= FirebaseDatabase.getInstance().getReference("/SERVER/EMAIL/");
         Map<String, Object> EMAIL = new HashMap<>();
         EMAIL.clear();
         EMAIL.put("message",message);
@@ -37,7 +37,7 @@ class NotifyUser {
     }
 
     static void topicsPUSH( String deviceId ,String memberEmail,String message_title,String message_body){
-        DatabaseReference mTopicsPUSH= FirebaseDatabase.getInstance().getReference("/LOG/PUSHTopics/");
+        DatabaseReference mTopicsPUSH= FirebaseDatabase.getInstance().getReference("/SERVER/PUSHTopics/");
 
         Map<String, Object> message = new HashMap<>();
         message.clear();
@@ -55,7 +55,7 @@ class NotifyUser {
     }
 
     static void IIDPUSH(String deviceId,String memberEmail,String message_title,String message_body){
-        DatabaseReference mIIDPUSH= FirebaseDatabase.getInstance().getReference("/LOG/PUSHIID/");
+        DatabaseReference mIIDPUSH= FirebaseDatabase.getInstance().getReference("/SERVER/PUSHIID/");
 
         Map<String, Object> message = new HashMap<>();
         message.clear();
