@@ -1,4 +1,4 @@
-package tw.imonkey.usbpl2303;
+package tw.imonkey.serialpl2303;
 
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;

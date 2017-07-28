@@ -1,4 +1,4 @@
-package tw.imonkey.usbpl2303;
+package tw.imonkey.serialpl2303;
 
 import android.app.Activity;
 import android.content.BroadcastReceiver;
@@ -44,7 +44,7 @@ import de.greenrobot.event.EventBus;
 
 
 
-public class Main2Activity extends Activity {
+public class MainActivity extends Activity {
     //**************USBSerialPort
     private static final String TAG = MainActivity.class.getSimpleName();
     //   private static final int USB_VENDOR_ID = 0x0403;//arduino nano FT232RL
@@ -65,10 +65,10 @@ public class Main2Activity extends Activity {
     int parity = UsbSerialInterface.PARITY_NONE;
     int flowControl= UsbSerialInterface.FLOW_CONTROL_OFF;
     String buffer = "" , CMD = "";
-    //*******firebase*************
+//*******firebase*************
     String memberEmail,deviceId;
     public static final String devicePrefs = "devicePrefs";
-    DatabaseReference  mRequest,mLog, mTX, mRX, presenceRef, connectedRef;
+    DatabaseReference  mRequest,mLog, mTX, mRX, mFriends, mRS232Live, presenceRef, lastOnlineRef, connectedRef, connectedRefF;
     int logCount,RXCount,TXCount;
     int dataCount;
     int limit=1000;//max Logs (even number)
@@ -138,9 +138,9 @@ public class Main2Activity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         TimeZone.setDefault(TimeZone.getTimeZone("Asia/Taipei"));
-        //     SharedPreferences.Editor editor = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE).edit();
-        //    editor.clear();
-        //   editor.commit();
+   //     SharedPreferences.Editor editor = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE).edit();
+    //    editor.clear();
+     //   editor.commit();
         SharedPreferences settings = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE);
         memberEmail = settings.getString("memberEmail",null);
         deviceId = settings.getString("deviceId",null);
@@ -151,18 +151,20 @@ public class Main2Activity extends Activity {
         if (memberEmail==null) {
             memberEmail="test@po-po.com";
             deviceId="PLC_RS232_test";
+            DatabaseReference mAddTestFUI= FirebaseDatabase.getInstance().getReference("/FUI/" +memberEmail.replace(".", "_"));
             DatabaseReference mAddTestDevice=FirebaseDatabase.getInstance().getReference("/DEVICE/");
             Map<String, Object> addTest = new HashMap<>();
             addTest.put("companyId","po-po") ;
-            addTest.put("device","usbpl2303");
+            addTest.put("device","serialpl2303");
             addTest.put("deviceType","PLC監控機"); //PLC監控機
             addTest.put("description","Android things rs232 test");
             addTest.put("masterEmail",memberEmail) ;
             addTest.put("timeStamp", ServerValue.TIMESTAMP);
             addTest.put("topics_id",deviceId);
-            Map<String, Object> user = new HashMap<>();
-            user.put(memberEmail.replace(".","_"),"Master");
-            addTest.put("users",user);
+            mAddTestFUI.child(deviceId).setValue(addTest);
+            Map<String, Object> User = new HashMap<>();
+            User.put(memberEmail.replace(".","_"),"Master");
+            addTest.put("users",User);
             mAddTestDevice.child(deviceId).setValue(addTest);
             startServer();
         }else{
@@ -190,13 +192,13 @@ public class Main2Activity extends Activity {
         }
 
         usbManager = getSystemService(UsbManager.class);
-        // Detach events are sent as a system-wide broadcast
+            // Detach events are sent as a system-wide broadcast
         IntentFilter filter = new IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED);
         registerReceiver(usbDetachedReceiver, filter);
 
-        mRX = FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/RX/");
-        mTX = FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/TX/");
-        mLog=FirebaseDatabase.getInstance().getReference("/DEVICE/" + deviceId+"/LOG/");
+        mRX = FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/RX/");
+        mTX = FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/TX/");
+        mLog=FirebaseDatabase.getInstance().getReference("/LOG/RS232/" + deviceId+"/LOG/");
         deviceOnline();
         listenUartTX();
         requestDevice();
@@ -330,28 +332,28 @@ public class Main2Activity extends Activity {
             editor.putInt("logCount",logCount);
             editor.apply();
         }else if (RXCheck.get(CMD)!=null) {
-            if (!data.equals(RXCheck.get(CMD))) {
-                alert(CMD + ":" + data);
-                RX.clear();
-                RX.put("message", CMD + ":" + data);
-                RX.put("timeStamp", ServerValue.TIMESTAMP);
-                mRX.push().setValue(RX);
-                mLog.push().setValue(RX);
-                RXCheck.put(CMD, data);
-                RXCount++;
-                logCount++;
-                SharedPreferences.Editor editor = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE).edit();
-                editor.putInt("RXCount", RXCount);
-                editor.putInt("logCount", logCount);
-                editor.apply();
-            } else{
-                Log.i(TAG, "Serial data is no change." );
+                  if (!data.equals(RXCheck.get(CMD))) {
+                    alert(CMD + ":" + data);
+                    RX.clear();
+                    RX.put("message", CMD + ":" + data);
+                    RX.put("timeStamp", ServerValue.TIMESTAMP);
+                    mRX.push().setValue(RX);
+                    mLog.push().setValue(RX);
+                    RXCheck.put(CMD, data);
+                    RXCount++;
+                    logCount++;
+                    SharedPreferences.Editor editor = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE).edit();
+                    editor.putInt("RXCount", RXCount);
+                    editor.putInt("logCount", logCount);
+                    editor.apply();
+                  } else{
+                      Log.i(TAG, "Serial data is no change." );
+                  }
+        }
+            if (RXCount>(limit+(limit)/2)) {
+                dataLimit(mRX,limit);
+                RXCount= RXCount-(limit)/2;
             }
-        }
-        if (RXCount>(limit+(limit)/2)) {
-            dataLimit(mRX,limit);
-            RXCount= RXCount-(limit)/2;
-        }
         if (RXCount>(limit+(limit)/2)) {
             dataLimit(mLog,limit);
             logCount= logCount-(limit)/2;
@@ -404,31 +406,36 @@ public class Main2Activity extends Activity {
                 }
                 handler.postDelayed(this, timer);
             }
-        };
-        handler.postDelayed(runnable,timer);
-    }
+          };
+            handler.postDelayed(runnable,timer);
+        }
     private void alert(String message){
 
-        NotifyUser.topicsPUSH(deviceId, memberEmail, "智慧機通知", message);
-        //      NotifyUser.IIDPUSH(deviceId, memberEmail, "智慧機通知", message);
-        //      NotifyUser.emailPUSH(deviceId, memberEmail, message);
-        //      NotifyUser.SMSPUSH(deviceId, memberEmail, message);
+            NotifyUser.topicsPUSH(deviceId, memberEmail, "智慧機通知", message);
+    //      NotifyUser.IIDPUSH(deviceId, memberEmail, "智慧機通知", message);
+    //      NotifyUser.emailPUSH(deviceId, memberEmail, message);
+    //      NotifyUser.SMSPUSH(deviceId, memberEmail, message);
         for (String email : friends ) {
             NotifyUser.topicsPUSH(deviceId, email, "智慧機通知", message);
-            //     NotifyUser.IIDPUSH(deviceId, email, "智慧機通知", message);
-            //      NotifyUser.emailPUSH(deviceId, email, message);
-            //     NotifyUser.SMSPUSH(deviceId, email, message);
+     //     NotifyUser.IIDPUSH(deviceId, email, "智慧機通知", message);
+    //      NotifyUser.emailPUSH(deviceId, email, message);
+     //     NotifyUser.SMSPUSH(deviceId, email, message);
         }
 
-        DatabaseReference mAlertMaster= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/alert");
+        DatabaseReference mAlertMaster= FirebaseDatabase.getInstance().getReference("/FUI/"+memberEmail.replace(".", "_")+"/"+deviceId+"/alert");
         alert.clear();
         alert.put("message",message);
         alert.put("timeStamp", ServerValue.TIMESTAMP);
         mAlertMaster.setValue(alert);
+        for (String email : friends ) {
+            DatabaseReference mAlertFriend= FirebaseDatabase.getInstance().getReference("/FUI/"+email.replace(".", "_")+"/"+deviceId+"/alert");
+            mAlertFriend.setValue(alert);
+        }
+
         toFBRegister(message);
     }
     private void toFBRegister(String message){
-        DatabaseReference mRegister= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/REGISTER");
+        DatabaseReference mRegister= FirebaseDatabase.getInstance().getReference("/FUI/"+memberEmail.replace(".", "_")+"/"+deviceId+"/REGISTER");
         String Register = message.split(":")[0].substring(7,11);
         String value =message.split(":")[1];
         if (Register.contains("M")) {
@@ -439,13 +446,13 @@ public class Main2Activity extends Activity {
                 mRegister.child("M"+(String.format("%04x",(Integer.parseInt(Register.substring(1),16)+i)))).updateChildren(register);
             }
             if (Register.contains("D")){
-                register.clear();
-                register.put("message", ByteBuffer.wrap(value.getBytes()).getFloat());
-                register.put("timeStamp", ServerValue.TIMESTAMP);
-                mRegister.child(Register).updateChildren(register);
+                    register.clear();
+                    register.put("message", ByteBuffer.wrap(value.getBytes()).getFloat());
+                    register.put("timeStamp", ServerValue.TIMESTAMP);
+                    mRegister.child(Register).updateChildren(register);
+                }
             }
         }
-    }
 
     // websocket server
     private void startServer() {
@@ -489,19 +496,25 @@ public class Main2Activity extends Activity {
             editor.putString("memberEmail",memberEmail);
             editor.putString("deviceId",deviceId);
             editor.apply();
-            //      mServer.sendMessage("echo: " + message);
-            //      Intent i;
-            //      i = new Intent(this,MainActivity.class);
-            //      startActivity(i);
+      //      mServer.sendMessage("echo: " + message);
+      //      Intent i;
+      //      i = new Intent(this,MainActivity.class);
+      //      startActivity(i);
             alert("PLC監控機設定完成!");
         }
     }
 
     //device online check
     private void deviceOnline(){
-        presenceRef = FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/connection");
+        mRS232Live=FirebaseDatabase.getInstance().getReference("/LOG/RS232/"+deviceId+"/connection");//for log activity
+        mRS232Live.setValue(true);
+        mRS232Live.onDisconnect().setValue(null);
+
+        presenceRef = FirebaseDatabase.getInstance().getReference("/FUI/"+memberEmail.replace(".", "_")+"/"+deviceId+"/connection");//for boss's main activity
         presenceRef.setValue(true);
         presenceRef.onDisconnect().setValue(null);
+        lastOnlineRef =FirebaseDatabase.getInstance().getReference("/FUI/"+memberEmail.replace(".", "_")+"/"+deviceId+"/lastOnline");
+        lastOnlineRef.onDisconnect().setValue(ServerValue.TIMESTAMP);
         connectedRef = FirebaseDatabase.getInstance().getReference(".info/connected");
         connectedRef.addValueEventListener(new ValueEventListener() {
             @Override
@@ -509,11 +522,44 @@ public class Main2Activity extends Activity {
                 boolean connected = snapshot.getValue(Boolean.class);
                 if (connected) {
                     presenceRef.setValue(true);
+                    mRS232Live.setValue(true);
                 }
             }
             @Override
             public void onCancelled(DatabaseError error) {
             }
+        });
+
+         //send connection to friend's main activity
+        mFriends= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/friend");
+        mFriends.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                friends.clear();
+                for (DataSnapshot childSnapshot : snapshot.getChildren()) {
+
+                    friends.add(childSnapshot.getValue().toString());
+
+                    final DatabaseReference presenceRefToFirends= FirebaseDatabase.getInstance().getReference("/FUI/"+childSnapshot.getValue().toString().replace(".", "_")+"/"+deviceId+"/connection");
+                    presenceRefToFirends.setValue(true);
+                    presenceRefToFirends.onDisconnect().setValue(null);
+                    connectedRefF = FirebaseDatabase.getInstance().getReference(".info/connected");
+                    connectedRefF.addValueEventListener(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(DataSnapshot snapshot) {
+                            boolean connected = snapshot.getValue(Boolean.class);
+                            if (connected) {
+                                presenceRefToFirends.setValue(true);
+                            }
+                        }
+                        @Override
+                        public void onCancelled(DatabaseError error) {
+                        }
+                    });
+                }
+            }
+            @Override
+            public void onCancelled(DatabaseError databaseError) {}
         });
     }
 
@@ -544,4 +590,5 @@ public class Main2Activity extends Activity {
         }
     }
 }
+
 

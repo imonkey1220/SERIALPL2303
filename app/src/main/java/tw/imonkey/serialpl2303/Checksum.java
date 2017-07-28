@@ -1,6 +1,6 @@
 
 
-package tw.imonkey.usbpl2303;
+package tw.imonkey.serialpl2303;
 public class Checksum {
     public static byte LRC(byte[] bytes) {
         byte iLRC = 0x00;

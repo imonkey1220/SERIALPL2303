@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="tw.imonkey.usbpl2303">
+    package="tw.imonkey.serialpl2303">
 
     <application
         android:allowBackup="true"
@@ -15,7 +15,7 @@
         <uses-library android:name="com.google.android.things" />
 
         <activity
-            android:name=".Main2Activity"
+            android:name="tw.imonkey.serialpl2303.Main2Activity"
             android:launchMode="singleTop">
 
             <!-- Launch as default from Android Studio -->
