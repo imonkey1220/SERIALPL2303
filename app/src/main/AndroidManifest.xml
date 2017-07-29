@@ -15,7 +15,7 @@
         <uses-library android:name="com.google.android.things" />
 
         <activity
-            android:name="tw.imonkey.serialpl2303.Main2Activity"
+            android:name="tw.imonkey.serialpl2303.MainActivity"
             android:launchMode="singleTop">
 
             <!-- Launch as default from Android Studio -->
