@@ -68,7 +68,8 @@ public class MainActivity extends Activity {
     //*******firebase*************
     String memberEmail,deviceId;
     public static final String devicePrefs = "devicePrefs";
-    DatabaseReference  mRequest,mLog, mTX, mRX, presenceRef, connectedRef;
+    DatabaseReference mSETTINGS,mRequest,mAlert, mLog, mTX, mRX,mUsers,presenceRef,connectedRef;
+
     int logCount,RXCount,TXCount;
     int dataCount;
     int limit=1000;//max Logs (even number)
@@ -78,6 +79,7 @@ public class MainActivity extends Activity {
     Map<String, Object> register = new HashMap<>();
     Map<String, String> RXCheck = new HashMap<>();
     ArrayList<String> friends = new ArrayList<>();
+    ArrayList<String> users = new ArrayList<>();
     boolean restart=true;
 
     Gpio RESETGpio;
@@ -138,9 +140,6 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         TimeZone.setDefault(TimeZone.getTimeZone("Asia/Taipei"));
-        //     SharedPreferences.Editor editor = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE).edit();
-        //    editor.clear();
-        //   editor.commit();
         SharedPreferences settings = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE);
         memberEmail = settings.getString("memberEmail",null);
         deviceId = settings.getString("deviceId",null);
@@ -197,6 +196,21 @@ public class MainActivity extends Activity {
         mRX = FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/RX/");
         mTX = FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/TX/");
         mLog=FirebaseDatabase.getInstance().getReference("/DEVICE/" + deviceId+"/LOG/");
+        mSETTINGS = FirebaseDatabase.getInstance().getReference("/DEVICE/" + deviceId + "/SETTINGS");
+        mAlert= FirebaseDatabase.getInstance().getReference("/DEVICE/"+ deviceId + "/alert");
+        //Device's Users
+        mUsers= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/users/");
+        mUsers.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                users.clear();
+                for (DataSnapshot childSnapshot : snapshot.getChildren()) {
+                    users.add(childSnapshot.getValue().toString());
+                }
+            }
+            @Override
+            public void onCancelled(DatabaseError databaseError) {}
+        });
         deviceOnline();
         listenUartTX();
         requestDevice();
