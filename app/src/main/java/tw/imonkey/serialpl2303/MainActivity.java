@@ -139,6 +139,44 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        init();
+        deviceOnline();
+        listenUartTX();
+        requestDevice();
+        alert("PLC監控機重新啟動!");
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        startUsbConnection();
+        EventBus.getDefault().register(this);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(usbDetachedReceiver);
+        stopUsbConnection();
+        EventBus.getDefault().unregister(this);
+        if (handler!=null) {
+            handler.removeCallbacks(runnable);
+            handler=null;
+        }
+
+        if ( RESETGpio != null) {
+            try {
+                RESETGpio.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                RESETGpio = null;
+            }
+        }
+    }
+
+    private void init(){
         TimeZone.setDefault(TimeZone.getTimeZone("Asia/Taipei"));
         SharedPreferences settings = getSharedPreferences(devicePrefs, Context.MODE_PRIVATE);
         memberEmail = settings.getString("memberEmail",null);
@@ -160,7 +198,7 @@ public class MainActivity extends Activity {
             addTest.put("timeStamp", ServerValue.TIMESTAMP);
             addTest.put("topics_id",deviceId);
             Map<String, Object> user = new HashMap<>();
-            user.put(memberEmail.replace(".","_"),"Master");
+            user.put(memberEmail.replace(".","_"),memberEmail);
             addTest.put("users",user);
             mAddTestDevice.child(deviceId).setValue(addTest);
             startServer();
@@ -196,9 +234,9 @@ public class MainActivity extends Activity {
         mRX = FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/RX/");
         mTX = FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/TX/");
         mLog=FirebaseDatabase.getInstance().getReference("/DEVICE/" + deviceId+"/LOG/");
+        mRequest= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/SETTINGS/CMD/");
         mSETTINGS = FirebaseDatabase.getInstance().getReference("/DEVICE/" + deviceId + "/SETTINGS");
         mAlert= FirebaseDatabase.getInstance().getReference("/DEVICE/"+ deviceId + "/alert");
-        //Device's Users
         mUsers= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/users/");
         mUsers.addValueEventListener(new ValueEventListener() {
             @Override
@@ -211,40 +249,6 @@ public class MainActivity extends Activity {
             @Override
             public void onCancelled(DatabaseError databaseError) {}
         });
-        deviceOnline();
-        listenUartTX();
-        requestDevice();
-        alert("PLC監控機重新啟動!");
-
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        startUsbConnection();
-        EventBus.getDefault().register(this);
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        unregisterReceiver(usbDetachedReceiver);
-        stopUsbConnection();
-        EventBus.getDefault().unregister(this);
-        if (handler!=null) {
-            handler.removeCallbacks(runnable);
-            handler=null;
-        }
-
-        if ( RESETGpio != null) {
-            try {
-                RESETGpio.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                RESETGpio = null;
-            }
-        }
     }
 
     private void startUsbConnection() {
@@ -374,7 +378,6 @@ public class MainActivity extends Activity {
     }
 
     private void requestDevice(){
-        mRequest= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/SETTINGS/CMD/");
         mRequest.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
