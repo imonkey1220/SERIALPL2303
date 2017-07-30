@@ -69,7 +69,6 @@ public class MainActivity extends Activity {
     String memberEmail,deviceId;
     public static final String devicePrefs = "devicePrefs";
     DatabaseReference mSETTINGS,mRequest,mAlert, mLog, mTX, mRX,mUsers,presenceRef,connectedRef;
-
     int logCount,RXCount,TXCount;
     int dataCount;
     int limit=1000;//max Logs (even number)
@@ -78,7 +77,6 @@ public class MainActivity extends Activity {
     Map<String, Object> alert = new HashMap<>();
     Map<String, Object> register = new HashMap<>();
     Map<String, String> RXCheck = new HashMap<>();
-    ArrayList<String> friends = new ArrayList<>();
     ArrayList<String> users = new ArrayList<>();
     boolean restart=true;
 
@@ -424,24 +422,35 @@ public class MainActivity extends Activity {
         };
         handler.postDelayed(runnable,timer);
     }
-    private void alert(String message){
+    private void alert(final String message){
+        mSETTINGS.child("notify").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                if(snapshot.child("SMS").getValue()!=null) {
+                    for (String email : users) {
+                        NotifyUser.SMSPUSH(deviceId, email, message);
+                    }
+                }
+                if (snapshot.child("EMAIL").getValue() != null) {
+                    for (String email : users) {
+                        NotifyUser.emailPUSH(deviceId, email, message);
+                    }
+                }
+                if (snapshot.child("PUSH").getValue() != null) {
+                    for (String email : users) {
+                        NotifyUser.IIDPUSH(deviceId, email, "智慧機通知", message);
+                    }
+                    NotifyUser.topicsPUSH(deviceId, memberEmail, "智慧機通知", message);
+                }
+            }
+            @Override
+            public void onCancelled(DatabaseError databaseError) {}
+        });
 
-        NotifyUser.topicsPUSH(deviceId, memberEmail, "智慧機通知", message);
-        //      NotifyUser.IIDPUSH(deviceId, memberEmail, "智慧機通知", message);
-        //      NotifyUser.emailPUSH(deviceId, memberEmail, message);
-        //      NotifyUser.SMSPUSH(deviceId, memberEmail, message);
-        for (String email : friends ) {
-            NotifyUser.topicsPUSH(deviceId, email, "智慧機通知", message);
-            //     NotifyUser.IIDPUSH(deviceId, email, "智慧機通知", message);
-            //      NotifyUser.emailPUSH(deviceId, email, message);
-            //     NotifyUser.SMSPUSH(deviceId, email, message);
-        }
-
-        DatabaseReference mAlertMaster= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/alert");
         alert.clear();
-        alert.put("message",message);
+        alert.put("message","Device:"+message);
         alert.put("timeStamp", ServerValue.TIMESTAMP);
-        mAlertMaster.setValue(alert);
+        mAlert.setValue(alert);
         toFBRegister(message);
     }
     private void toFBRegister(String message){
@@ -506,11 +515,11 @@ public class MainActivity extends Activity {
             editor.putString("memberEmail",memberEmail);
             editor.putString("deviceId",deviceId);
             editor.apply();
-            //      mServer.sendMessage("echo: " + message);
-            //      Intent i;
-            //      i = new Intent(this,MainActivity.class);
-            //      startActivity(i);
-            alert("PLC監控機設定完成!");
+            mServer.sendMessage("echo: " + message);
+            Intent i;
+            i = new Intent(this,MainActivity.class);
+            startActivity(i);
+            alert("PLC智慧機設定完成!");
         }
     }
 
