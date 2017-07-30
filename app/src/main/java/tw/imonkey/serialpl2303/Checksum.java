@@ -18,10 +18,24 @@ public class Checksum {
         return iSUM;
     }
 
-    public static byte CRC(byte[] bytes){
-        byte iCRC;
-        iCRC=0x00;
-        return iCRC;
+
+    // Compute the MODBUS RTU CRC
+    public static int CRC(byte[] bytes)
+    {
+        int icrc = 0xFFFF; //CRC16
+        for (int pos = 0; pos < bytes.length; pos++) {
+            icrc ^= (int)bytes[pos] & 0xFF;   // XOR byte into least sig. byte of crc
+            for (int i = 8; i != 0; i--) {    // Loop over each bit
+                if ((icrc & 0x0001) != 0) {      // If the LSB is set
+                    icrc >>= 1;                    // Shift right and XOR 0xA001
+                    icrc ^= 0xA001;
+                }
+                else                            // Else LSB is not set
+                    icrc >>= 1;                    // Just shift right
+            }
+        }
+// Note, this number has low and high bytes swapped, so use it accordingly (or swap bytes)
+        return icrc;
     }
 }
 
