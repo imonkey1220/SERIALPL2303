@@ -47,10 +47,6 @@ import de.greenrobot.event.EventBus;
 public class MainActivity extends Activity {
     //**************USBSerialPort
     private static final String TAG = MainActivity.class.getSimpleName();
-    //   private static final int USB_VENDOR_ID = 0x0403;//arduino nano FT232RL
-    //   private static final int USB_PRODUCT_ID = 0x6001;
-    //   private static final int USB_VENDOR_ID = 0x2341;//arduino uno(BT)
-    //   private static final int USB_PRODUCT_ID = 0x0043;
     private static final int USB_VENDOR_ID = 0x067B;//PL2303HXD
     private static final int USB_PRODUCT_ID = 0x2303;
 
