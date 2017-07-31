@@ -137,7 +137,7 @@ public class MainActivity extends Activity {
         deviceOnline();
         listenUartTX();
         requestDevice();
-        alert("PLC監控機重新啟動!");
+        alert("RS232智慧機重新啟動!");
 
     }
 
@@ -227,8 +227,8 @@ public class MainActivity extends Activity {
 
         mRX = FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/RX/");
         mTX = FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/TX/");
-        mLog=FirebaseDatabase.getInstance().getReference("/DEVICE/" + deviceId+"/LOG/");
         mRequest= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/SETTINGS/CMD/");
+        mLog=FirebaseDatabase.getInstance().getReference("/DEVICE/" + deviceId+"/LOG/");
         mSETTINGS = FirebaseDatabase.getInstance().getReference("/DEVICE/" + deviceId + "/SETTINGS");
         mAlert= FirebaseDatabase.getInstance().getReference("/DEVICE/"+ deviceId + "/alert");
         mUsers= FirebaseDatabase.getInstance().getReference("/DEVICE/"+deviceId+"/users/");
@@ -515,7 +515,7 @@ public class MainActivity extends Activity {
             Intent i;
             i = new Intent(this,MainActivity.class);
             startActivity(i);
-            alert("PLC智慧機設定完成!");
+            alert("RS232智慧機設定完成!");
         }
     }
 
